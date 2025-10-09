@@ -1,0 +1,26 @@
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+header {
+  background: linear-gradient(to right, #fcd34d, #f59e0b);
+}
+
+table img {
+  border: 2px solid #ffc107;
+  background: #fff;
+}
+
+.modal-content {
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-primary {
+  background-color: #f59e0b;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #d97706;
+}
