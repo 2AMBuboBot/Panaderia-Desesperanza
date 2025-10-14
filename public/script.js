@@ -61,6 +61,29 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+function editarProducto(id) {
+  fetch(`http://localhost:3000/api/productos/${id}`)
+    .then(res => res.json())
+    .then(p => {
+      // Cargar los datos en el formulario
+      document.getElementById("nombre").value = p.nombre;
+      document.getElementById("descripcion").value = p.descripcion;
+      document.getElementById("precio").value = p.precio;
+      document.getElementById("imagen").value = p.imagen;
+      document.getElementById("id_categoria").value = p.id_categoria || "";
+
+      // Cambiar a modo edición
+      editando = true;
+      idEditar = id;
+
+      // Mostrar modal
+      const modal = new bootstrap.Modal(document.getElementById("modalProducto"));
+      modal.show();
+    })
+    .catch(err => console.error("Error al cargar producto:", err));
+}
+
+
 // Función global para eliminar
 function eliminarProducto(id) {
   if (confirm("¿Seguro que quieres eliminar este producto?")) {
