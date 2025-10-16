@@ -94,46 +94,64 @@ modalEl.addEventListener('hidden.bs.modal', () => {
   // Agregar o editar producto
   // ===============================
   form.addEventListener("submit", e => {
-    e.preventDefault();
+  e.preventDefault();
 
+  const nombre = document.getElementById("nombre").value.trim();
+  const descripcion = document.getElementById("descripcion").value.trim();
+  const precio = document.getElementById("precio").value;
+  const imagen = document.getElementById("imagen").value;
+  const id_categoria = document.getElementById("id_categoria").value;
 
-    const producto = {
-      nombre: document.getElementById("nombre").value,
-      descripcion: document.getElementById("descripcion").value,
-      precio: document.getElementById("precio").value,
-      imagen: document.getElementById("imagen").value,
-      id_categoria: document.getElementById("id_categoria").value
-    };
+  // ===========================
+  // VALIDACIONES
+  // ===========================
+  const regexTexto = /^[^0-9]+$/; // Solo letras, espacios y símbolos, sin números
 
-    if (editando) {
-      fetch(`http://localhost:3000/api/productos/${idEditar}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(producto)
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.message || "Producto actualizado");
-        form.reset();
-        editando = false;
-        idEditar = null;
-        cargarProductos();
-        bootstrap.Modal.getInstance(document.getElementById("modalProducto")).hide();
-      });
-    } else {
-      fetch("http://localhost:3000/api/productos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(producto)
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.message || "Producto agregado");
-        form.reset();
-        cargarProductos();
-        bootstrap.Modal.getInstance(document.getElementById("modalProducto")).hide();
-      });
-    }
-  });
+  if (!regexTexto.test(nombre)) {
+    alert("El nombre no puede contener números");
+    return; // Salimos del submit
+  }
+
+  if (!regexTexto.test(descripcion)) {
+    alert("La descripción no puede contener números");
+    return; // Salimos del submit
+  }
+
+  // Si pasa validación, creamos el objeto producto
+  const producto = { nombre, descripcion, precio, imagen, id_categoria };
+
+  // ===========================
+  // Lógica de agregar o editar
+  // ===========================
+  if (editando) {
+    fetch(`http://localhost:3000/api/productos/${idEditar}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(producto)
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message || "Producto actualizado");
+      form.reset();
+      editando = false;
+      idEditar = null;
+      cargarProductos();
+      bootstrap.Modal.getInstance(document.getElementById("modalProducto")).hide();
+    });
+  } else {
+    fetch("http://localhost:3000/api/productos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(producto)
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message || "Producto agregado");
+      form.reset();
+      cargarProductos();
+      bootstrap.Modal.getInstance(document.getElementById("modalProducto")).hide();
+    });
+  }
+});
 
 });
