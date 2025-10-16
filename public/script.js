@@ -4,6 +4,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("formProducto");
   const trad = document.getElementById("productos-tradicional");
   const temp = document.getElementById("productos-temporada");
+  
+  const modalEl = document.getElementById("modalProducto");
+
+// Cada vez que el modal se cierre, reseteamos el formulario y el estado de edición
+modalEl.addEventListener('hidden.bs.modal', () => {
+  form.reset();
+  editando = false;
+  idEditar = null;
+  document.getElementById("id_categoria").selectedIndex = 0; // reinicia el select
+});
 
   function cargarProductos() {
     fetch("http://localhost:3000/api/productos")
@@ -33,27 +43,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   cargarProductos();
+  
+  document.addEventListener("click", e => {
+    if (e.target.classList.contains("btn-editar")) {
+      editarProducto(e.target.dataset.id);
+    } else if (e.target.classList.contains("btn-eliminar")) {
+      eliminarProducto(e.target.dataset.id);
+    }
+  });
 
   // ===============================
   // Funciones de edición y eliminación
   // ===============================
   function editarProducto(id) {
-    fetch(`http://localhost:3000/api/productos/${id}`)
-      .then(res => res.json())
-      .then(p => {
-        document.getElementById("nombre").value = p.nombre;
-        document.getElementById("descripcion").value = p.descripcion;
-        document.getElementById("precio").value = p.precio;
-        document.getElementById("imagen").value = p.imagen;
-        document.getElementById("id_categoria").value = p.id_categoria;
+  fetch("http://localhost:3000/api/productos")
+    .then(res => res.json())
+    .then(data => {
+      const p = data.find(item => item.id_producto == id);
+      if (!p) return alert("Producto no encontrado");
 
-        editando = true;
-        idEditar = id;
+      document.getElementById("nombre").value = p.nombre;
+      document.getElementById("descripcion").value = p.descripcion;
+      document.getElementById("precio").value = p.precio;
+      document.getElementById("imagen").value = p.imagen;
+      document.getElementById("id_categoria").value = p.id_categoria;
 
-        const modal = new bootstrap.Modal(document.getElementById("modalProducto"));
-        modal.show();
-      });
-  }
+      editando = true;
+      idEditar = id;
+
+      const modal = new bootstrap.Modal(document.getElementById("modalProducto"));
+      modal.show();
+    });
+}
 
   function eliminarProducto(id) {
     if (confirm("¿Seguro que quieres eliminar este producto?")) {
@@ -66,22 +87,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ===============================
-  // Delegación de eventos
-  // ===============================
-  document.addEventListener("click", e => {
-    if (e.target.classList.contains("btn-editar")) {
-      editarProducto(e.target.dataset.id);
-    } else if (e.target.classList.contains("btn-eliminar")) {
-      eliminarProducto(e.target.dataset.id);
-    }
-  });
+  
+  
 
   // ===============================
   // Agregar o editar producto
   // ===============================
   form.addEventListener("submit", e => {
     e.preventDefault();
+
 
     const producto = {
       nombre: document.getElementById("nombre").value,
