@@ -159,10 +159,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Logout
   // ===============================
   if (btnLogout) {
-    btnLogout.addEventListener("click", () => {
-      fetch("/api/logout", { method: "POST", credentials: "include" })
-        .then(() => { window.location.href = "login.html"; });
-    });
-  }
+  btnLogout.addEventListener("click", () => {
+    fetch("/api/logout", { method: "POST", credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.mensaje || "Sesión cerrada con éxito");
+        window.location.href = "login.html";
+      })
+      .catch(err => {
+        console.error("Error al cerrar sesión:", err);
+        alert("No se pudo cerrar la sesión");
+      });
+  });
+}
 
 });

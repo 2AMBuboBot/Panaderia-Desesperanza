@@ -143,11 +143,13 @@ app.get("/api/session", (req, res) => {
 // ===========
 app.get("/api/productos", requireLogin, async (req, res) => {
   try {
-    const [rows] = await promisePool.query(`
-      SELECT p.*, c.nombre AS categoria
-      FROM producto p
-      LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
-    `);
+    const userId = req.session.userId;
+const [rows] = await promisePool.query(`
+  SELECT p.*, c.nombre AS categoria
+  FROM producto p
+  LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
+  WHERE p.user_id = ?
+`, [userId]);
     res.json(rows);
   } catch (err) {
     console.error("Error al obtener productos:", err.message);
@@ -174,10 +176,12 @@ app.post("/api/productos", requireLogin, async (req, res) => {
       );
     }
 
-    await promisePool.query(
-      "INSERT INTO producto (nombre, descripcion, precio, imagen, id_categoria) VALUES (?, ?, ?, ?, ?)",
-      [nombre, descripcion, precio, imagen, catID]
-    );
+    const userId = req.session.userId;
+
+await promisePool.query(
+  "INSERT INTO producto (nombre, descripcion, precio, imagen, id_categoria, user_id) VALUES (?, ?, ?, ?, ?, ?)",
+  [nombre, descripcion, precio, imagen, catID, userId]
+);
 
     res.json({ message: "✅ Producto agregado correctamente" });
   } catch (err) {
@@ -192,11 +196,12 @@ app.put("/api/productos/:id", requireLogin, async (req, res) => {
   if (!nombre || !descripcion || !precio || !id_categoria) return res.status(400).json({ error: "Todos los campos son obligatorios" });
 
   try {
-    await promisePool.query(`
-      UPDATE producto
-      SET nombre=?, descripcion=?, precio=?, imagen=?, id_categoria=?
-      WHERE id_producto=?
-    `, [nombre, descripcion, precio, imagen, id_categoria, id]);
+    const userId = req.session.userId;
+await promisePool.query(`
+  UPDATE producto
+  SET nombre=?, descripcion=?, precio=?, imagen=?, id_categoria=?
+  WHERE id_producto=? AND user_id=?
+`, [nombre, descripcion, precio, imagen, id_categoria, id, userId]);
 
     res.json({ message: "✅ Producto actualizado correctamente" });
   } catch (err) {
@@ -208,7 +213,10 @@ app.put("/api/productos/:id", requireLogin, async (req, res) => {
 app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   const { id } = req.params;
   try {
-    await promisePool.query("DELETE FROM producto WHERE id_producto=?", [id]);
+    await promisePool.query(
+  "DELETE FROM producto WHERE id_producto=? AND user_id=?", 
+  [id, userId]
+);
     res.json({ message: "🗑️ Producto eliminado correctamente" });
   } catch (err) {
     console.error("Error al eliminar producto:", err.message);
