@@ -46,35 +46,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("registerForm");
 
   form.addEventListener("submit", async (e) => {
-    e.preventDefault(); // ⚠ Muy importante para que no recargue la página
+    e.preventDefault();
 
     const username = document.getElementById("newUsername").value.trim();
     const password = document.getElementById("newPassword").value.trim();
 
     if (!username || !password) {
-      alert("Ingresa usuario y contraseña");
+      alert("Por favor completa todos los campos");
       return;
     }
 
     try {
-      const res = await fetch("/register", { // si tu backend sigue con /register
+      const res = await fetch("/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include"
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.mensaje || "Error al registrar");
-      } else {
-        alert(data.mensaje || "Usuario registrado correctamente");
-        window.location.href = "login.html"; // redirige al login
+        alert(data.mensaje || "Error al registrar usuario");
+        return;
       }
+
+      alert(data.mensaje); // "Usuario registrado correctamente"
+      window.location.href = "login.html"; // redirige al login
     } catch (err) {
-      console.error("Error en registro:", err);
-      alert("Error en el servidor");
+      console.error("Error al registrar usuario:", err);
+      alert("Error al registrar usuario");
     }
   });
 });
