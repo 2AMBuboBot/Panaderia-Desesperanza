@@ -80,9 +80,9 @@ app.post("/api/login", async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      "SELECT * FROM usuarios WHERE username = ? AND password = ?",
-      [username, password]
-    );
+  "SELECT * FROM usuarios WHERE username = ? AND password = ?",
+  [username, password]
+);
 
     if (rows.length === 0)
       return res

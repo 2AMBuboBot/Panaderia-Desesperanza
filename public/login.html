@@ -115,25 +115,27 @@
     });
 
     // Registro
-    document.getElementById("registerForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const username = document.getElementById("newUsername").value;
-      const password = document.getElementById("newPassword").value;
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("newUsername").value;
+  const password = document.getElementById("newPassword").value;
 
-      const resp = await fetch("/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
+  const resp = await fetch("/api/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
 
-      if (resp.ok) {
-        alert("Usuario registrado con éxito. Inicia sesión.");
-        registerContainer.style.display = "none";
-        loginContainer.style.display = "block";
-      } else {
-        alert("Error al registrar usuario");
-      }
-    });
+  const data = await resp.json();
+
+  if (resp.ok) {
+    alert("Usuario registrado con éxito. Bienvenido " + username);
+    // 🔥 Redirigir directamente a la página principal
+    window.location.href = "index.html";
+  } else {
+    alert(data.mensaje || "Error al registrar usuario");
+  }
+});
   </script>
 </body>
 </html>
