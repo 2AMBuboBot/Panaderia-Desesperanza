@@ -154,4 +154,24 @@ modalEl.addEventListener('hidden.bs.modal', () => {
   }
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/session", { credentials: "include" }) // <--- importante
+    .then(res => res.json())
+    .then(data => {
+      if (!data.loggedIn) {
+        window.location.href = "login.html"; // Redirige solo si NO hay sesión
+      } else {
+        // Si hay sesión, carga los productos
+        cargarProductos();
+      }
+    });
+});
+
+fetch("/api/logout", {
+  method: "POST",
+  credentials: "include"
+}).then(() => {
+  window.location.href = "login.html";
+});
+
 });

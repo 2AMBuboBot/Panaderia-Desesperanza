@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
-const mysql = require("mysql2/promise");
+const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
 
@@ -17,42 +17,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ==============================
-// Conexión a MySQL (Promise)
-// ==============================
-let pool;
-(async () => {
-  try {
-    pool = await mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
-    console.log("✅ Conectado a la base de datos", process.env.DB_NAME);
-  } catch (err) {
-    console.error("❌ Error al conectar con la base de datos:", err.message);
-  }
-})();
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
-// ==============================
-// Sesiones con MySQLStore
-// ==============================
-const sessionStore = new MySQLStore(
-  {
-    expiration: 1000 * 60 * 60, // 1 hora
-    createDatabaseTable: true,
-  },
-  {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-  }
-);
+const sessionStore = new MySQLStore({}, pool);
 
 app.use(
   session({
