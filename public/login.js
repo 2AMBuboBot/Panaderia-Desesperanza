@@ -42,24 +42,42 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // REGISTRO
-  document.getElementById("registerForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const username = document.getElementById("newUsername").value;
-    const password = document.getElementById("newPassword").value;
+  document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("registerForm");
 
-    const resp = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault(); // ⚠ Muy importante para que no recargue la página
 
-    const data = await resp.json();
+    const username = document.getElementById("newUsername").value.trim();
+    const password = document.getElementById("newPassword").value.trim();
 
-    if (resp.ok) {
-      alert("Usuario registrado con éxito. Bienvenido " + username);
-      window.location.href = "index.html"; // redirigir directo
-    } else {
-      alert(data.mensaje || "Error al registrar usuario");
+    if (!username || !password) {
+      alert("Ingresa usuario y contraseña");
+      return;
+    }
+
+    try {
+      const res = await fetch("/register", { // si tu backend sigue con /register
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: "include"
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.mensaje || "Error al registrar");
+      } else {
+        alert(data.mensaje || "Usuario registrado correctamente");
+        window.location.href = "login.html"; // redirige al login
+      }
+    } catch (err) {
+      console.error("Error en registro:", err);
+      alert("Error en el servidor");
     }
   });
+});
+
+
 });
