@@ -12,11 +12,17 @@ const PORT = process.env.PORT || 3000;
 // ==============================
 // Middleware
 // ==============================
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
+// ==============================
+// Conexión MySQL
+// ==============================
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -27,45 +33,55 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+// Para queries con async/await
+const promisePool = pool.promise();
+
+// ==============================
+// Sesiones
+// ==============================
 const sessionStore = new MySQLStore({}, pool);
 
-app.use(
-  session({
-    key: "sid",
-    secret: "panaderiaSecret",
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60, // 1 hora
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-    },
-  })
-);
+app.use(session({
+  key: "sid",
+  secret: "panaderiaSecret",
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 1000 * 60 * 60, // 1 hora
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax"
+  }
+}));
+
+// ==============================
+// Middleware para proteger rutas
+// ==============================
+function requireLogin(req, res, next) {
+  if (!req.session.userId) return res.status(401).json({ error: "No autorizado" });
+  next();
+}
 
 // ==============================
 // LOGIN
 // ==============================
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password)
-    return res.status(400).json({ mensaje: "Faltan datos" });
+  if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
 
   try {
-    const [rows] = await pool.query(
-  "SELECT * FROM usuarios WHERE username = ? AND password = ?",
-  [username, password]
-);
+    const [rows] = await promisePool.query(
+      "SELECT * FROM usuarios WHERE username = ? AND password = ?",
+      [username, password]
+    );
 
-    if (rows.length === 0)
-      return res
-        .status(401)
-        .json({ mensaje: "Usuario o contraseña incorrectos" });
+    if (rows.length === 0) return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
 
+    // Guardar sesión
     req.session.userId = rows[0].id;
     req.session.username = rows[0].username;
+
     res.json({ mensaje: "Inicio de sesión exitoso" });
   } catch (err) {
     console.error("Error al iniciar sesión:", err);
@@ -73,30 +89,25 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// ===========================
-// Registrar usuario nuevo
-// ===========================
+// ==============================
+// REGISTRAR USUARIO
+// ==============================
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-
-  if (!username || !password)
-    return res.status(400).json({ mensaje: "Faltan datos" });
+  if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
 
   try {
-    // Verificar si ya existe el usuario
-    const [rows] = await pool.query(
+    const [rows] = await promisePool.query(
       "SELECT * FROM usuarios WHERE username = ?",
       [username]
     );
 
-    if (rows.length > 0)
-      return res.status(409).json({ mensaje: "El usuario ya existe" });
+    if (rows.length > 0) return res.status(409).json({ mensaje: "El usuario ya existe" });
 
-    // Registrar nuevo usuario
-    await pool.query("INSERT INTO usuarios (username, password) VALUES (?, ?)", [
-      username,
-      password,
-    ]);
+    await promisePool.query(
+      "INSERT INTO usuarios (username, password) VALUES (?, ?)",
+      [username, password]
+    );
 
     res.json({ mensaje: "Usuario registrado correctamente" });
   } catch (err) {
@@ -109,7 +120,7 @@ app.post("/register", async (req, res) => {
 // CERRAR SESIÓN
 // ==============================
 app.post("/api/logout", (req, res) => {
-  req.session.destroy((err) => {
+  req.session.destroy(err => {
     if (err) return res.status(500).json({ mensaje: "Error al cerrar sesión" });
     res.clearCookie("sid");
     res.json({ mensaje: "Sesión cerrada" });
@@ -127,12 +138,12 @@ app.get("/api/session", (req, res) => {
   }
 });
 
-// ===========================
-// Obtener todos los productos
-// ===========================
-app.get("/api/productos", async (req, res) => {
+// ===========
+// PRODUCTOS 
+// ===========
+app.get("/api/productos", requireLogin, async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const [rows] = await promisePool.query(`
       SELECT p.*, c.nombre AS categoria
       FROM producto p
       LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
@@ -144,33 +155,26 @@ app.get("/api/productos", async (req, res) => {
   }
 });
 
-// ===========================
-// Crear nuevo producto
-// ===========================
-app.post("/api/productos", async (req, res) => {
+app.post("/api/productos", requireLogin, async (req, res) => {
   const { nombre, descripcion, precio, imagen, id_categoria } = req.body;
-
-  if (!nombre || !descripcion || !precio || !imagen || !id_categoria) {
-    return res.status(400).json({ error: "Todos los campos son obligatorios" });
-  }
+  if (!nombre || !descripcion || !precio || !imagen || !id_categoria) return res.status(400).json({ error: "Todos los campos son obligatorios" });
 
   const catID = parseInt(id_categoria);
-
   try {
-    const [rows] = await pool.query(
+    const [rows] = await promisePool.query(
       "SELECT * FROM categoria WHERE id_categoria = ?",
       [catID]
     );
 
     if (rows.length === 0) {
       const nombreCat = catID === 1 ? "Tradicional" : "Temporada";
-      await pool.query(
+      await promisePool.query(
         "INSERT INTO categoria (id_categoria, nombre, descripcion) VALUES (?, ?, ?)",
         [catID, nombreCat, "Creado automáticamente desde la web"]
       );
     }
 
-    await pool.query(
+    await promisePool.query(
       "INSERT INTO producto (nombre, descripcion, precio, imagen, id_categoria) VALUES (?, ?, ?, ?, ?)",
       [nombre, descripcion, precio, imagen, catID]
     );
@@ -182,26 +186,17 @@ app.post("/api/productos", async (req, res) => {
   }
 });
 
-// ===========================
-// Actualizar producto
-// ===========================
-app.put("/api/productos/:id", async (req, res) => {
+app.put("/api/productos/:id", requireLogin, async (req, res) => {
   const { id } = req.params;
   const { nombre, descripcion, precio, imagen, id_categoria } = req.body;
-
-  if (!nombre || !descripcion || !precio || !id_categoria) {
-    return res.status(400).json({ error: "Todos los campos son obligatorios" });
-  }
+  if (!nombre || !descripcion || !precio || !id_categoria) return res.status(400).json({ error: "Todos los campos son obligatorios" });
 
   try {
-    await pool.query(
-      `
+    await promisePool.query(`
       UPDATE producto
       SET nombre=?, descripcion=?, precio=?, imagen=?, id_categoria=?
       WHERE id_producto=?
-    `,
-      [nombre, descripcion, precio, imagen, id_categoria, id]
-    );
+    `, [nombre, descripcion, precio, imagen, id_categoria, id]);
 
     res.json({ message: "✅ Producto actualizado correctamente" });
   } catch (err) {
@@ -210,14 +205,10 @@ app.put("/api/productos/:id", async (req, res) => {
   }
 });
 
-// ===========================
-// Eliminar producto
-// ===========================
-app.delete("/api/productos/:id", async (req, res) => {
+app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   const { id } = req.params;
-
   try {
-    await pool.query("DELETE FROM producto WHERE id_producto=?", [id]);
+    await promisePool.query("DELETE FROM producto WHERE id_producto=?", [id]);
     res.json({ message: "🗑️ Producto eliminado correctamente" });
   } catch (err) {
     console.error("Error al eliminar producto:", err.message);
@@ -225,9 +216,10 @@ app.delete("/api/productos/:id", async (req, res) => {
   }
 });
 
-// ===========================
-// Iniciar servidor
-// ===========================
+// ==============================
+// Servidor
+// ==============================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
+

@@ -4,19 +4,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("formProducto");
   const trad = document.getElementById("productos-tradicional");
   const temp = document.getElementById("productos-temporada");
-  
   const modalEl = document.getElementById("modalProducto");
+  const btnLogout = document.getElementById("btnLogout"); 
 
-// Cada vez que el modal se cierre, reseteamos el formulario y el estado de edición
-modalEl.addEventListener('hidden.bs.modal', () => {
-  form.reset();
-  editando = false;
-  idEditar = null;
-  document.getElementById("id_categoria").selectedIndex = 0; // reinicia el select
-});
+  // Cada vez que el modal se cierre, reseteamos el formulario y el estado de edición
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    form.reset();
+    editando = false;
+    idEditar = null;
+    document.getElementById("id_categoria").selectedIndex = 0;
+  });
 
+  // ===============================
+  // Verificar sesión primero
+  // ===============================
+  fetch("/api/session", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.loggedIn) {
+        window.location.href = "login.html";
+      } else {
+        cargarProductos();
+      }
+    });
+
+  // ===============================
+  // Cargar productos
+  // ===============================
   function cargarProductos() {
-    fetch("http://localhost:3000/api/productos")
+    fetch("/api/productos", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         trad.innerHTML = "";
@@ -42,8 +58,9 @@ modalEl.addEventListener('hidden.bs.modal', () => {
       });
   }
 
-  cargarProductos();
-  
+  // ===============================
+  // Click en botones editar / eliminar
+  // ===============================
   document.addEventListener("click", e => {
     if (e.target.classList.contains("btn-editar")) {
       editarProducto(e.target.dataset.id);
@@ -52,126 +69,100 @@ modalEl.addEventListener('hidden.bs.modal', () => {
     }
   });
 
-  // ===============================
-  // Funciones de edición y eliminación
-  // ===============================
   function editarProducto(id) {
-  fetch("http://localhost:3000/api/productos")
-    .then(res => res.json())
-    .then(data => {
-      const p = data.find(item => item.id_producto == id);
-      if (!p) return alert("Producto no encontrado");
+    fetch("/api/productos", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        const p = data.find(item => item.id_producto == id);
+        if (!p) return alert("Producto no encontrado");
 
-      document.getElementById("nombre").value = p.nombre;
-      document.getElementById("descripcion").value = p.descripcion;
-      document.getElementById("precio").value = p.precio;
-      document.getElementById("imagen").value = p.imagen;
-      document.getElementById("id_categoria").value = p.id_categoria;
+        document.getElementById("nombre").value = p.nombre;
+        document.getElementById("descripcion").value = p.descripcion;
+        document.getElementById("precio").value = p.precio;
+        document.getElementById("imagen").value = p.imagen;
+        document.getElementById("id_categoria").value = p.id_categoria;
 
-      editando = true;
-      idEditar = id;
+        editando = true;
+        idEditar = id;
 
-      const modal = new bootstrap.Modal(document.getElementById("modalProducto"));
-      modal.show();
-    });
-}
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      });
+  }
 
   function eliminarProducto(id) {
     if (confirm("¿Seguro que quieres eliminar este producto?")) {
-      fetch(`http://localhost:3000/api/productos/${id}`, { method: "DELETE" })
-        .then(res => res.json())
-        .then(data => {
-          alert(data.message || "Producto eliminado");
-          cargarProductos();
-        });
+      fetch(`/api/productos/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || "Producto eliminado");
+        cargarProductos();
+      });
     }
   }
-
-  
-  
 
   // ===============================
   // Agregar o editar producto
   // ===============================
   form.addEventListener("submit", e => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const nombre = document.getElementById("nombre").value.trim();
-  const descripcion = document.getElementById("descripcion").value.trim();
-  const precio = document.getElementById("precio").value;
-  const imagen = document.getElementById("imagen").value;
-  const id_categoria = document.getElementById("id_categoria").value;
+    const nombre = document.getElementById("nombre").value.trim();
+    const descripcion = document.getElementById("descripcion").value.trim();
+    const precio = document.getElementById("precio").value;
+    const imagen = document.getElementById("imagen").value;
+    const id_categoria = document.getElementById("id_categoria").value;
 
-  // ===========================
-  // VALIDACIONES
-  // ===========================
-  const regexTexto = /^[^0-9]+$/; // Solo letras, espacios y símbolos, sin números
+    const regexTexto = /^[^0-9]+$/;
+    if (!regexTexto.test(nombre)) { alert("El nombre no puede contener números"); return; }
+    if (!regexTexto.test(descripcion)) { alert("La descripción no puede contener números"); return; }
 
-  if (!regexTexto.test(nombre)) {
-    alert("El nombre no puede contener números");
-    return; // Salimos del submit
-  }
+    const producto = { nombre, descripcion, precio, imagen, id_categoria };
 
-  if (!regexTexto.test(descripcion)) {
-    alert("La descripción no puede contener números");
-    return; // Salimos del submit
-  }
-
-  // Si pasa validación, creamos el objeto producto
-  const producto = { nombre, descripcion, precio, imagen, id_categoria };
-
-  // ===========================
-  // Lógica de agregar o editar
-  // ===========================
-  if (editando) {
-    fetch(`http://localhost:3000/api/productos/${idEditar}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(producto)
-    })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.message || "Producto actualizado");
-      form.reset();
-      editando = false;
-      idEditar = null;
-      cargarProductos();
-      bootstrap.Modal.getInstance(document.getElementById("modalProducto")).hide();
-    });
-  } else {
-    fetch("http://localhost:3000/api/productos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(producto)
-    })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.message || "Producto agregado");
-      form.reset();
-      cargarProductos();
-      bootstrap.Modal.getInstance(document.getElementById("modalProducto")).hide();
-    });
-  }
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  fetch("/api/session", { credentials: "include" }) // <--- importante
-    .then(res => res.json())
-    .then(data => {
-      if (!data.loggedIn) {
-        window.location.href = "login.html"; // Redirige solo si NO hay sesión
-      } else {
-        // Si hay sesión, carga los productos
+    if (editando) {
+      fetch(`/api/productos/${idEditar}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(producto)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || "Producto actualizado");
+        form.reset();
+        editando = false;
+        idEditar = null;
         cargarProductos();
-      }
-    });
-});
+        bootstrap.Modal.getInstance(modalEl).hide();
+      });
+    } else {
+      fetch("/api/productos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(producto)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || "Producto agregado");
+        form.reset();
+        cargarProductos();
+        bootstrap.Modal.getInstance(modalEl).hide();
+      });
+    }
+  });
 
-fetch("/api/logout", {
-  method: "POST",
-  credentials: "include"
-}).then(() => {
-  window.location.href = "login.html";
-});
+  // ===============================
+  // Logout
+  // ===============================
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST", credentials: "include" })
+        .then(() => { window.location.href = "login.html"; });
+    });
+  }
 
 });
