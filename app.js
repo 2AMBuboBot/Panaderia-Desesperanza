@@ -7,7 +7,7 @@ const cors = require("cors");
 const path = require("path");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // ==============================
 // Middleware
@@ -17,27 +17,42 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Conexión a MySQL
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-db.connect(err => {
-  if (err) {
+// ==============================
+// Conexión a MySQL (Promise)
+// ==============================
+let pool;
+(async () => {
+  try {
+    pool = await mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+    });
+    console.log("✅ Conectado a la base de datos", process.env.DB_NAME);
+  } catch (err) {
     console.error("❌ Error al conectar con la base de datos:", err.message);
-  } else {
-    console.log("✅ Conectado a la base de datos panaderia");
   }
-});
+})();
 
-const sessionStore = new MySQLStore({}, pool);
+// ==============================
+// Sesiones con MySQLStore
+// ==============================
+const sessionStore = new MySQLStore(
+  {
+    expiration: 1000 * 60 * 60, // 1 hora
+    createDatabaseTable: true,
+  },
+  {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+  }
+);
 
 app.use(
   session({
@@ -50,24 +65,45 @@ app.use(
       maxAge: 1000 * 60 * 60, // 1 hora
       httpOnly: true,
       secure: false,
-      sameSite: "lax"
-    }
+      sameSite: "lax",
+    },
   })
 );
 
-app.get("/", (req, res) => {
-  if (req.session.userId) {
-    // Si ya inició sesión, muestra el index de la panadería
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-  } else {
-    // Si no ha iniciado sesión, muestra el login
-    res.sendFile(path.join(__dirname, "public", "login.html"));
+// ==============================
+// RUTAS DE LOGIN Y REGISTRO
+// ==============================
+
+// Registrar usuario nuevo
+app.post("/api/register", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ mensaje: "Faltan datos" });
+
+  try {
+    const [existe] = await pool.query(
+      "SELECT * FROM usuarios WHERE username = ?",
+      [username]
+    );
+    if (existe.length > 0) {
+      return res
+        .status(409)
+        .json({ mensaje: "Ese nombre de usuario ya existe" });
+    }
+
+    await pool.query("INSERT INTO usuarios (username, password) VALUES (?, ?)", [
+      username,
+      password,
+    ]);
+
+    res.json({ mensaje: "Usuario registrado correctamente" });
+  } catch (err) {
+    console.error("Error al registrar usuario:", err);
+    res.status(500).json({ mensaje: "Error en el servidor" });
   }
 });
 
-// ==============================
-// LOGIN
-// ==============================
+// Iniciar sesión
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password)
@@ -80,7 +116,9 @@ app.post("/api/login", async (req, res) => {
     );
 
     if (rows.length === 0)
-      return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
+      return res
+        .status(401)
+        .json({ mensaje: "Usuario o contraseña incorrectos" });
 
     req.session.userId = rows[0].id;
     req.session.username = rows[0].username;
@@ -91,20 +129,17 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// ==============================
-// CERRAR SESIÓN
-// ==============================
+// Cerrar sesión
 app.post("/api/logout", (req, res) => {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ mensaje: "Error al cerrar sesión" });
+  req.session.destroy((err) => {
+    if (err)
+      return res.status(500).json({ mensaje: "Error al cerrar sesión" });
     res.clearCookie("sid");
     res.json({ mensaje: "Sesión cerrada" });
   });
 });
 
-// ==============================
-// VERIFICAR SESIÓN
-// ==============================
+// Verificar sesión
 app.get("/api/session", (req, res) => {
   if (req.session.userId) {
     res.json({ loggedIn: true, usuario: req.session.username });
@@ -112,6 +147,26 @@ app.get("/api/session", (req, res) => {
     res.json({ loggedIn: false });
   }
 });
+
+// ===========================
+// PROTECCIÓN DE RUTAS
+// ===========================
+function requireAuth(req, res, next) {
+  if (req.session && req.session.userId) return next();
+  res.redirect("/login.html");
+}
+
+// ===========================
+// Ruta principal (solo si hay sesión)
+// ===========================
+app.get("/", (req, res) => {
+  if (!req.session.userId) {
+    res.sendFile(path.join(__dirname, "public", "login.html"));
+  } else {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  }
+});
+
 
 // ===========================
 // Obtener todos los productos

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panadería La Desesperanza - Login</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .login-container {
+      max-width: 400px;
+      background: #fff;
+      margin: 100px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    a {
+      color: #a4773a;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .switch {
+      margin-top: 10px;
+    }
+
+    button {
+      width: 100%;
+      background-color: #b9935a;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #a4773a;
+    }
+  </style>
+</head>
+<body>
+  <header>Panadería La Desesperanza</header>
+
+  <main>
+    <div class="login-container" id="loginContainer">
+      <h2>Iniciar Sesión</h2>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Usuario" required>
+        <input type="password" id="password" placeholder="Contraseña" required>
+        <button type="submit">Entrar</button>
+      </form>
+      <p class="switch">¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a></p>
+    </div>
+
+    <div class="login-container" id="registerContainer" style="display:none;">
+      <h2>Crear Cuenta</h2>
+      <form id="registerForm">
+        <input type="text" id="newUsername" placeholder="Nuevo usuario" required>
+        <input type="password" id="newPassword" placeholder="Nueva contraseña" required>
+        <button type="submit">Registrarse</button>
+      </form>
+      <p class="switch">¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión aquí</a></p>
+    </div>
+  </main>
+
+  <footer><p>© 2025 Panadería La Desesperanza</p></footer>
+
+  <script>
+    // Mostrar / ocultar formularios
+    const loginContainer = document.getElementById("loginContainer");
+    const registerContainer = document.getElementById("registerContainer");
+    document.getElementById("showRegister").onclick = () => {
+      loginContainer.style.display = "none";
+      registerContainer.style.display = "block";
+    };
+    document.getElementById("showLogin").onclick = () => {
+      registerContainer.style.display = "none";
+      loginContainer.style.display = "block";
+    };
+
+    // Login
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      const resp = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (resp.ok) {
+        window.location.href = "/panaderia.html";
+      } else {
+        alert("Usuario o contraseña incorrectos");
+      }
+    });
+
+    // Registro
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("newUsername").value;
+      const password = document.getElementById("newPassword").value;
+
+      const resp = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (resp.ok) {
+        alert("Usuario registrado con éxito. Inicia sesión.");
+        registerContainer.style.display = "none";
+        loginContainer.style.display = "block";
+      } else {
+        alert("Error al registrar usuario");
+      }
+    });
+  </script>
+</body>
+</html>
+
