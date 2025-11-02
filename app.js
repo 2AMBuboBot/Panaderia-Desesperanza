@@ -98,6 +98,38 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// ===========================
+// Registrar usuario nuevo
+// ===========================
+app.post("/register", async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password)
+    return res.status(400).json({ mensaje: "Faltan datos" });
+
+  try {
+    // Verificar si ya existe el usuario
+    const [rows] = await pool.query(
+      "SELECT * FROM usuarios WHERE username = ?",
+      [username]
+    );
+
+    if (rows.length > 0)
+      return res.status(409).json({ mensaje: "El usuario ya existe" });
+
+    // Registrar nuevo usuario
+    await pool.query("INSERT INTO usuarios (username, password) VALUES (?, ?)", [
+      username,
+      password,
+    ]);
+
+    res.json({ mensaje: "Usuario registrado correctamente" });
+  } catch (err) {
+    console.error("Error al registrar usuario:", err.message);
+    res.status(500).json({ mensaje: "Error al registrar usuario" });
+  }
+});
+
 // ==============================
 // CERRAR SESIÓN
 // ==============================
