@@ -61,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
+        credentials: "include" // importante para guardar la sesión
       });
 
       const data = await res.json();
@@ -71,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       alert(data.mensaje); // "Usuario registrado correctamente"
-      window.location.href = "login.html"; // redirige al login
+      window.location.href = "index.html"; // redirige a la página de productos
     } catch (err) {
       console.error("Error al registrar usuario:", err);
       alert("Error al registrar usuario");

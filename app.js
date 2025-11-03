@@ -104,10 +104,14 @@ app.post("/register", async (req, res) => {
 
     if (rows.length > 0) return res.status(409).json({ mensaje: "El usuario ya existe" });
 
-    await promisePool.query(
+    const [result] = await promisePool.query(
       "INSERT INTO usuarios (username, password) VALUES (?, ?)",
       [username, password]
     );
+
+    // 🔹 Crear sesión automáticamente
+    req.session.userId = result.insertId;
+    req.session.username = username;
 
     res.json({ mensaje: "Usuario registrado correctamente" });
   } catch (err) {
