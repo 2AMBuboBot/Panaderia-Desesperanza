@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+
   // Verificar sesión activa
-  fetch("/api/session")
+  fetch("/api/session", { credentials: "include" })
     .then(res => res.json())
     .then(data => {
       if (data.loggedIn) window.location.href = "index.html";
@@ -20,8 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // LOGIN
-  const form = document.getElementById("loginForm");
-  form.addEventListener("submit", async e => {
+  const loginForm = document.getElementById("loginForm");
+  loginForm.addEventListener("submit", async e => {
     e.preventDefault();
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
@@ -29,7 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const resp = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      credentials: "include"
     });
 
     const data = await resp.json();
@@ -42,10 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // REGISTRO
-  document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("registerForm");
-
-  form.addEventListener("submit", async (e) => {
+  const registerForm = document.getElementById("registerForm");
+  registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const username = document.getElementById("newUsername").value.trim();
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include" // importante para guardar la sesión
+        credentials: "include"
       });
 
       const data = await res.json();
@@ -71,14 +71,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      alert(data.mensaje); // "Usuario registrado correctamente"
-      window.location.href = "index.html"; // redirige a la página de productos
+      // Éxito: redirigir a productos
+      alert(data.mensaje);
+      window.location.href = "index.html";
     } catch (err) {
       console.error("Error al registrar usuario:", err);
       alert("Error al registrar usuario");
     }
   });
-});
-
 
 });

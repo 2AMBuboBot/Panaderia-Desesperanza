@@ -94,28 +94,33 @@ app.post("/api/login", async (req, res) => {
 // ==============================
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
+  if (!username || !password)
+    return res.status(400).json({ mensaje: "Faltan datos" });
 
   try {
+    // Verificar si el usuario ya existe
     const [rows] = await promisePool.query(
       "SELECT * FROM usuarios WHERE username = ?",
       [username]
     );
 
-    if (rows.length > 0) return res.status(409).json({ mensaje: "El usuario ya existe" });
+    if (rows.length > 0)
+      return res.status(409).json({ mensaje: "El usuario ya existe" });
 
+    // Insertar nuevo usuario
     const [result] = await promisePool.query(
       "INSERT INTO usuarios (username, password) VALUES (?, ?)",
       [username, password]
     );
 
-    // 🔹 Crear sesión automáticamente
+    // Crear sesión automática
     req.session.userId = result.insertId;
     req.session.username = username;
 
+    // Devolver éxito
     res.json({ mensaje: "Usuario registrado correctamente" });
   } catch (err) {
-    console.error("Error al registrar usuario:", err.message);
+    console.error("Error al registrar usuario:", err);
     res.status(500).json({ mensaje: "Error al registrar usuario" });
   }
 });
