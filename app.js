@@ -9,9 +9,7 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==============================
-// Middleware
-// ==============================
+
 app.use(cors({
   origin: "http://localhost:3000",
   credentials: true
@@ -20,9 +18,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ==============================
+
 // Conexión MySQL
-// ==============================
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -36,9 +33,8 @@ const pool = mysql.createPool({
 // Para queries con async/await
 const promisePool = pool.promise();
 
-// ==============================
+
 // Sesiones
-// ==============================
 const sessionStore = new MySQLStore({}, pool);
 
 app.use(session({
@@ -55,17 +51,14 @@ app.use(session({
   }
 }));
 
-// ==============================
-// Middleware para proteger rutas
-// ==============================
+
 function requireLogin(req, res, next) {
   if (!req.session.userId) return res.status(401).json({ error: "No autorizado" });
   next();
 }
 
-// ==============================
+
 // LOGIN
-// ==============================
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
@@ -89,9 +82,8 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// ==============================
+
 // REGISTRAR USUARIO
-// ==============================
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password)
@@ -125,9 +117,8 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ==============================
+
 // CERRAR SESIÓN
-// ==============================
 app.post("/api/logout", (req, res) => {
   req.session.destroy(err => {
     if (err) return res.status(500).json({ mensaje: "Error al cerrar sesión" });
@@ -136,9 +127,8 @@ app.post("/api/logout", (req, res) => {
   });
 });
 
-// ==============================
+
 // VERIFICAR SESIÓN
-// ==============================
 app.get("/api/session", (req, res) => {
   if (req.session.userId) {
     res.json({ loggedIn: true, usuario: req.session.username });
@@ -147,9 +137,8 @@ app.get("/api/session", (req, res) => {
   }
 });
 
-// ===========
+
 // PRODUCTOS 
-// ===========
 app.get("/api/productos", requireLogin, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -221,11 +210,17 @@ await promisePool.query(`
 
 app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   const { id } = req.params;
+  const userId = req.session.userId; 
   try {
-    await promisePool.query(
-  "DELETE FROM producto WHERE id_producto=? AND user_id=?", 
-  [id, userId]
-);
+    const [result] = await promisePool.query(
+      "DELETE FROM producto WHERE id_producto=? AND user_id=?", 
+      [id, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Producto no encontrado o no autorizado" });
+    }
+
     res.json({ message: "🗑️ Producto eliminado correctamente" });
   } catch (err) {
     console.error("Error al eliminar producto:", err.message);
@@ -233,9 +228,8 @@ app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   }
 });
 
-// ==============================
+
 // Servidor
-// ==============================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
