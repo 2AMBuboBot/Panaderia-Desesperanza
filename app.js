@@ -229,22 +229,33 @@ app.delete("/api/productos/:id", requireLogin, async (req, res) => {
 });
 
 // Mostrar productos del carrito del usuario
-app.get("/api/carrito", requireLogin, async (req, res) => {
-  try {
-    const userId = req.session.userId;
+app.get("/api/carrito", (req, res) => {
+  const userId = req.session.user?.id_usuario;
 
-    const [rows] = await promisePool.query(`
-      SELECT c.id_carrito, c.cantidad, p.nombre, p.precio, p.imagen
-      FROM carrito c
-      INNER JOIN producto p ON c.id_producto = p.id_producto
-      WHERE c.id_usuario = ?
-    `, [userId]);
-
-    res.json(rows);
-  } catch (err) {
-    console.error("Error al obtener carrito:", err.message);
-    res.status(500).json({ error: "Error al obtener carrito" });
+  if (!userId) {
+    return res.status(401).json({ error: "No hay sesión activa" });
   }
+
+  const query = `
+    SELECT 
+      c.id_carrito, 
+      c.id_producto, 
+      c.cantidad,
+      p.nombre, 
+      p.precio, 
+      p.imagen
+    FROM carrito c
+    INNER JOIN producto p ON c.id_producto = p.id_producto
+    WHERE c.id_usuario = ?
+  `;
+
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("Error al obtener carrito:", err);
+      return res.status(500).json({ error: "Error al obtener carrito" });
+    }
+    res.json(results);
+  });
 });
 
 // Agregar producto al carrito
