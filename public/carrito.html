@@ -156,14 +156,14 @@ fetch("/api/carrito", { credentials: "include" })
 
   // 💳 Pagar
   btnPagar.addEventListener("click", () => {
-    fetch("/api/carrito", { method: "DELETE", credentials: "include" })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.message || "Compra realizada con éxito 🎉");
-        location.reload();
-      })
-      .catch(() => alert("Error al procesar el pago 😕"));
-  });
+  fetch("/api/pagar", { method: "POST", credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message || "Compra realizada con éxito 🎉");
+      location.reload();
+    })
+    .catch(() => alert("Error al procesar el pago 😕"));
+});
 
   // 🚪 Cerrar sesión
   if (btnLogout) {
