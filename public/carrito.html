@@ -58,98 +58,101 @@
   const btnLogout = document.getElementById("btnLogout");
   const btnPagar = document.getElementById("btnPagar");
 
-  // 🔹 Cargar carrito
-  fetch("/api/carrito", { credentials: "include" })
-    .then(res => {
-      if (!res.ok) throw new Error("Error al obtener el carrito");
-      return res.json();
-    })
-    .then(data => {
-      tabla.innerHTML = ""; // limpiar tabla
+  //Cargar carrito
+fetch("/api/carrito", { credentials: "include" })
+  .then(res => {
+    if (!res.ok) throw new Error("Error al obtener el carrito");
+    return res.json();
+  })
+  .then(data => {
+    // Si tu backend devuelve { carrito: [...] }, tomar data.carrito
+    if (data.carrito) data = data.carrito;
 
-      if (!Array.isArray(data) || data.length === 0) {
+    tabla.innerHTML = ""; // limpiar tabla
+
+    if (!Array.isArray(data) || data.length === 0) {
+      tabla.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            Tu carrito está vacío 😢
+          </td>
+        </tr>`;
+      totalCarrito.textContent = "Total: $0.00";
+      return;
+    }
+
+    let total = 0;
+    data.forEach(item => {
+      const precio = parseFloat(item.precio || 0);
+      const subtotal = precio * (item.cantidad || 1);
+      total += subtotal;
+
+      tabla.innerHTML += `
+        <tr>
+          <td>${item.nombre || "Sin nombre"}</td>
+          <td>$${precio.toFixed(2)}</td>
+          <td>${item.cantidad || 1}</td>
+          <td>$${subtotal.toFixed(2)}</td>
+          <td>
+            <button class="btn btn-outline-danger btn-sm eliminar" data-id="${item.id_carrito || item.id_producto}">
+              🗑️ Eliminar
+            </button>
+          </td>
+        </tr>`;
+    });
+
+    totalCarrito.textContent = `Total: $${total.toFixed(2)}`;
+
+    // 🗑️ Eliminar producto
+    document.querySelectorAll(".eliminar").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const id = e.target.dataset.id;
+        fetch(`/api/carrito/${id}`, {
+          method: "DELETE",
+          credentials: "include"
+        })
+          .then(res => {
+            if (!res.ok) throw new Error("Error al eliminar");
+            return res.json();
+          })
+          .then(() => {
+            e.target.closest("tr").remove();
+            recalcularTotal();
+          })
+          .catch(err => console.error("Error al eliminar:", err));
+      });
+    });
+
+    // 🔄 Recalcular total
+    function recalcularTotal() {
+      let nuevoTotal = 0;
+      tabla.querySelectorAll("tr").forEach(fila => {
+        const subtotalCell = fila.children[3];
+        if (subtotalCell) {
+          const valor = parseFloat(subtotalCell.textContent.replace("$", "")) || 0;
+          nuevoTotal += valor;
+        }
+      });
+      totalCarrito.textContent = `Total: $${nuevoTotal.toFixed(2)}`;
+      if (nuevoTotal === 0) {
         tabla.innerHTML = `
           <tr>
             <td colspan="5" class="text-center text-muted py-4">
               Tu carrito está vacío 😢
             </td>
           </tr>`;
-        totalCarrito.textContent = "Total: $0.00";
-        return;
       }
-
-      let total = 0;
-data.forEach(item => {
-  const precio = parseFloat(item.precio); // 👈 convierte a número
-  const subtotal = precio * item.cantidad;
-  total += subtotal;
-
-  tabla.innerHTML += `
-    <tr>
-      <td>${item.nombre}</td>
-      <td>$${precio.toFixed(2)}</td>  <!-- 👈 usa la variable precio -->
-      <td>${item.cantidad}</td>
-      <td>$${subtotal.toFixed(2)}</td>
-      <td>
-        <button class="btn btn-outline-danger btn-sm eliminar" data-id="${item.id_carrito}">
-          🗑️ Eliminar
-        </button>
-      </td>
-    </tr>`;
-});
-
-      totalCarrito.textContent = `Total: $${total.toFixed(2)}`;
-
-      // 🗑️ Eliminar producto
-      document.querySelectorAll(".eliminar").forEach(btn => {
-        btn.addEventListener("click", e => {
-          const id = e.target.dataset.id;
-          fetch(`/api/carrito/${id}`, {
-            method: "DELETE",
-            credentials: "include"
-          })
-            .then(res => {
-              if (!res.ok) throw new Error("Error al eliminar");
-              return res.json();
-            })
-            .then(() => {
-              e.target.closest("tr").remove();
-              recalcularTotal();
-            })
-            .catch(err => console.error("Error al eliminar:", err));
-        });
-      });
-
-      // 🔄 Recalcular total
-      function recalcularTotal() {
-        let nuevoTotal = 0;
-        tabla.querySelectorAll("tr").forEach(fila => {
-          const subtotalCell = fila.children[3];
-          if (subtotalCell) {
-            const valor = parseFloat(subtotalCell.textContent.replace("$", "")) || 0;
-            nuevoTotal += valor;
-          }
-        });
-        totalCarrito.textContent = `Total: $${nuevoTotal.toFixed(2)}`;
-        if (nuevoTotal === 0) {
-          tabla.innerHTML = `
-            <tr>
-              <td colspan="5" class="text-center text-muted py-4">
-                Tu carrito está vacío 😢
-              </td>
-            </tr>`;
-        }
-      }
-    })
-    .catch(err => {
-      console.error("Error al cargar productos:", err);
-      tabla.innerHTML = `
-        <tr>
-          <td colspan="5" class="text-center text-danger py-4">
-            Error al cargar los productos 😵
-          </td>
-        </tr>`;
-    });
+    }
+  })
+  .catch(err => {
+    console.error("Error al cargar productos:", err);
+    tabla.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center text-danger py-4">
+          Error al cargar los productos 😵
+        </td>
+      </tr>`;
+  });
 
   // 💳 Pagar
   btnPagar.addEventListener("click", () => {

@@ -129,67 +129,61 @@ document.addEventListener("click", e => {
     }
   }
 
-  
+
   // Agregar o editar producto
-  form.addEventListener("submit", e => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const nombre = document.getElementById("nombre").value.trim();
   const descripcion = document.getElementById("descripcion").value.trim();
   const precio = parseFloat(document.getElementById("precio").value);
-  const imagen = document.getElementById("imagen").value;
-  const id_categoria = document.getElementById("id_categoria").value;
+  const imagen = document.getElementById("imagen").value.trim();
+  const id_categoria = parseInt(document.getElementById("id_categoria").value);
 
   const regexTexto = /^[^0-9]+$/;
 
-  
-  if (!regexTexto.test(nombre)) {
-    alert("El nombre no puede contener números");
-    return;
-  }
-  if (!regexTexto.test(descripcion)) {
-    alert("La descripción no puede contener números");
-    return;
-  }
-
-  
-  if (isNaN(precio) || precio <= 0) {
-    alert("El precio debe ser un número mayor que 0");
-    return;
-  }
+  // Validaciones
+  if (!regexTexto.test(nombre)) return alert("El nombre no puede contener números");
+  if (!regexTexto.test(descripcion)) return alert("La descripción no puede contener números");
+  if (isNaN(precio) || precio <= 0) return alert("El precio debe ser un número mayor que 0");
 
   const producto = { nombre, descripcion, precio, imagen, id_categoria };
 
-  if (editando) {
-    fetch(`/api/productos/${idEditar}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(producto)
-    })
-    .then(res => res.json())
-    .then(data => {
+  try {
+    if (editando) {
+      if (!idEditar) return alert("Error: producto sin identificador");
+
+      const res = await fetch(`/api/productos/${idEditar}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(producto)
+      });
+      const data = await res.json();
       alert(data.message || "Producto actualizado");
-      form.reset();
+
       editando = false;
       idEditar = null;
-      cargarProductos();
-      bootstrap.Modal.getInstance(modalEl).hide();
-    });
-  } else {
-    fetch("/api/productos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(producto)
-    })
-    .then(res => res.json())
-    .then(data => {
+    } else {
+      const res = await fetch("/api/productos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(producto)
+      });
+      const data = await res.json();
       alert(data.message || "Producto agregado");
-      form.reset();
-      cargarProductos();
-      bootstrap.Modal.getInstance(modalEl).hide();
-    });
+    }
+
+    form.reset();
+    document.getElementById("id_categoria").selectedIndex = 0;
+
+    cargarProductos();
+    bootstrap.Modal.getInstance(modalEl).hide();
+
+  } catch (err) {
+    console.error("Error al guardar producto:", err);
+    alert("Error de conexión con el servidor");
   }
 });
 

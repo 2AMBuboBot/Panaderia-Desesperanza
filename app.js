@@ -194,15 +194,19 @@ res.json({
 app.put("/api/productos/:id", requireLogin, async (req, res) => {
   const { id } = req.params;
   const { nombre, descripcion, precio, imagen, id_categoria } = req.body;
-  if (!nombre || !descripcion || !precio || !id_categoria) return res.status(400).json({ error: "Todos los campos son obligatorios" });
+
+  // Validar id solo si es edición
+  if (!id) return res.status(400).json({ error: "Producto sin identificador" });
+  if (!nombre || !descripcion || !precio || !id_categoria)
+      return res.status(400).json({ error: "Todos los campos son obligatorios" });
 
   try {
     const userId = req.session.userId;
-await promisePool.query(`
-  UPDATE producto
-  SET nombre=?, descripcion=?, precio=?, imagen=?, id_categoria=?
-  WHERE id_producto=? AND user_id=?
-`, [nombre, descripcion, precio, imagen, id_categoria, id, userId]);
+    await promisePool.query(`
+      UPDATE producto
+      SET nombre=?, descripcion=?, precio=?, imagen=?, id_categoria=?
+      WHERE id_producto=? AND user_id=?
+    `, [nombre, descripcion, precio, imagen, id_categoria, id, userId]);
 
     res.json({ message: "✅ Producto actualizado correctamente" });
   } catch (err) {
@@ -248,9 +252,8 @@ app.get("/api/carrito", requireLogin, async (req, res) => {
         ON c.id_producto = p.id_producto
       WHERE c.id_usuario = ?
     `, [userId]);
-
-    console.log("✅ Carrito obtenido:", rows);
     res.json(rows);
+
   } catch (err) {
     console.error("❌ Error al obtener carrito:", err);
     res.status(500).json({ error: err.message });
