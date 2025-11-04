@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <p>${p.descripcion}</p>
             <span class="precio">$${p.precio}</span>
             <div class="mt-2">
+              <button class="btn btn-success btn-sm btn-agregar" data-id="${p.id_producto}">Agregar 🛒</button>
               <button class="btn btn-warning btn-sm btn-editar" data-id="${p.id_producto}">Editar</button>
               <button class="btn btn-danger btn-sm btn-eliminar" data-id="${p.id_producto}">Eliminar</button>
             </div>
@@ -55,6 +56,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
   }
+
+  // Agregar al carrito
+document.addEventListener("click", e => {
+  if (e.target.classList.contains("btn-agregar")) {
+    const id = e.target.dataset.id;
+    fetch("/api/carrito", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id_producto: id, cantidad: 1 })
+    })
+    .then(res => res.json())
+    .then(data => alert(data.message || "Agregado al carrito"))
+    .catch(err => console.error(err));
+  }
+});
 
   
   // Click en botones editar / eliminar

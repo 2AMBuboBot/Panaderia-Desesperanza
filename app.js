@@ -228,6 +228,103 @@ app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   }
 });
 
+//CARRITO — Mostrar productos del carrito del usuario
+app.get("/api/carrito", requireLogin, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    const [rows] = await promisePool.query(`
+      SELECT c.id_carrito, c.cantidad, p.nombre, p.precio, p.imagen
+      FROM carrito c
+      INNER JOIN producto p ON c.id_producto = p.id_producto
+      WHERE c.id_usuario = ?
+    `, [userId]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error al obtener carrito:", err.message);
+    res.status(500).json({ error: "Error al obtener carrito" });
+  }
+});
+
+
+// Agregar producto al carrito
+app.post("/api/carrito", requireLogin, async (req, res) => {
+  const { id_producto, cantidad } = req.body;
+  const userId = req.session.userId;
+
+  try {
+    // Verificar si ya existe el producto en el carrito
+    const [rows] = await promisePool.query(
+      "SELECT * FROM carrito WHERE id_usuario = ? AND id_producto = ?",
+      [userId, id_producto]
+    );
+
+    if (rows.length > 0) {
+      await promisePool.query(
+        "UPDATE carrito SET cantidad = cantidad + ? WHERE id_usuario = ? AND id_producto = ?",
+        [cantidad || 1, userId, id_producto]
+      );
+    } else {
+      await promisePool.query(
+        "INSERT INTO carrito (id_usuario, id_producto, cantidad) VALUES (?, ?, ?)",
+        [userId, id_producto, cantidad || 1]
+      );
+    }
+
+    res.json({ message: "Producto agregado al carrito 🛒" });
+  } catch (err) {
+    console.error("Error al agregar al carrito:", err.message);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+// Actualizar cantidad
+app.put("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
+  const { id_carrito } = req.params;
+  const { cantidad } = req.body;
+  const userId = req.session.userId;
+
+  try {
+    await promisePool.query(
+      "UPDATE carrito SET cantidad = ? WHERE id_carrito = ? AND id_usuario = ?",
+      [cantidad, id_carrito, userId]
+    );
+    res.json({ message: "Cantidad actualizada" });
+  } catch (err) {
+    console.error("Error al actualizar carrito:", err.message);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+// Eliminar producto del carrito
+app.delete("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
+  const { id_carrito } = req.params;
+  const userId = req.session.userId;
+
+  try {
+    await promisePool.query(
+      "DELETE FROM carrito WHERE id_carrito = ? AND id_usuario = ?",
+      [id_carrito, userId]
+    );
+    res.json({ message: "Producto eliminado del carrito" });
+  } catch (err) {
+    console.error("Error al eliminar del carrito:", err.message);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+// Vaciar carrito (al pagar)
+app.delete("/api/carrito", requireLogin, async (req, res) => {
+  const userId = req.session.userId;
+  try {
+    await promisePool.query("DELETE FROM carrito WHERE id_usuario = ?", [userId]);
+    res.json({ message: "Compra realizada con éxito 🧾 Carrito vaciado" });
+  } catch (err) {
+    console.error("Error al vaciar carrito:", err.message);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
 
 // Servidor
 app.listen(PORT, () => {
