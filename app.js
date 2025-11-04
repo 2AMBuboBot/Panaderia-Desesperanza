@@ -236,7 +236,7 @@ app.get("/api/carrito", requireLogin, async (req, res) => {
     const [rows] = await promisePool.query(`
       SELECT c.id_carrito, c.cantidad, p.nombre, p.precio, p.imagen
       FROM carrito c
-      INNER JOIN producto p ON c.id_producto = p.id_producto
+      INNER JOIN producto p ON c.id_producto = p.id
       WHERE c.id_usuario = ?
     `, [userId]);
 
