@@ -57,19 +57,29 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
-  // Agregar al carrito
+ // Agregar al carrito
 document.addEventListener("click", e => {
   if (e.target.classList.contains("btn-agregar")) {
     const id = e.target.dataset.id;
+
+    if (!id) {
+      console.error("❌ No se encontró el ID del producto al agregar al carrito");
+      alert("Error: producto sin identificador");
+      return;
+    }
+
     fetch("/api/carrito", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ id_producto: id, cantidad: 1 })
     })
-    .then(res => res.json())
-    .then(data => alert(data.message || "Agregado al carrito"))
-    .catch(err => console.error(err));
+      .then(res => {
+        if (!res.ok) throw new Error("Error al agregar al carrito");
+        return res.json();
+      })
+      .then(data => alert(data.message || "Agregado al carrito 🛒"))
+      .catch(err => console.error("Error al agregar al carrito:", err));
   }
 });
 

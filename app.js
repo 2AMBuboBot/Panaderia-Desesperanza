@@ -258,7 +258,16 @@ app.post("/api/carrito", requireLogin, async (req, res) => {
   const { id_producto, cantidad } = req.body;
   const userId = req.session.userId;
 
+  console.log("🧠 Datos recibidos en /api/carrito:", req.body); // Debug
+
   try {
+    // 🔍 Validar antes de seguir
+    if (!id_producto) {
+      console.error("⚠️ No se recibió id_producto en el body");
+      return res.status(400).json({ error: "id_producto es requerido" });
+    }
+
+    // Buscar si ya existe el producto en el carrito
     const [rows] = await promisePool.query(
       "SELECT * FROM carrito WHERE id_usuario = ? AND id_producto = ?",
       [userId, id_producto]
@@ -278,7 +287,7 @@ app.post("/api/carrito", requireLogin, async (req, res) => {
 
     res.json({ message: "Producto agregado al carrito 🛍️" });
   } catch (err) {
-    console.error("Error al agregar al carrito:", err.message);
+    console.error("❌ Error al agregar al carrito:", err.message);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
