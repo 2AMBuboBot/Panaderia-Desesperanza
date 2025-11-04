@@ -331,40 +331,19 @@ app.delete("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
   }
 });
 
-// Pagar
-app.post("/api/pagar", requireLogin, async (req, res) => {
+// Vaciar carrito (al pagar)
+app.delete("/api/carrito", requireLogin, async (req, res) => {
   const userId = req.session.userId;
 
   try {
-    //Obtener los productos del carrito
-    const [carrito] = await promisePool.query(`
-      SELECT p.id_producto, p.nombre, p.precio, c.cantidad
-      FROM carrito c
-      INNER JOIN producto p ON c.id_producto = p.id_producto
-      WHERE c.id_usuario = ?
-    `, [userId]);
+    await promisePool.query(
+      "DELETE FROM carrito WHERE id_usuario = ?",
+      [userId]
+    );
 
-    if (carrito.length === 0) {
-      return res.status(400).json({ error: "El carrito está vacío" });
-    }
-
-    //Calcular total
-    const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
-
-    //Crear pedido
-    const [pedidoResult] = await promisePool.query(`
-  INSERT INTO pedido (id_cliente, fecha_pedido, total, estado)
-  VALUES (?, NOW(), ?, 'pendiente')
-`, [userId, total]);
-
-    const idPedido = pedidoResult.insertId;
-
-    //Vaciar carrito
-    await promisePool.query("DELETE FROM carrito WHERE id_usuario = ?", [userId]);
-
-    res.json({ message: "Compra realizada con éxito 🎉", idPedido });
+    res.json({ message: "Compra realizada con éxito 🎉 Carrito vaciado" });
   } catch (err) {
-    console.error("Error al procesar pago:", err);
+    console.error("Error al vaciar carrito:", err.message);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
