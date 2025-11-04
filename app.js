@@ -228,7 +228,7 @@ app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   }
 });
 
-//CARRITO — Mostrar productos del carrito del usuario
+// Mostrar productos del carrito del usuario
 app.get("/api/carrito", requireLogin, async (req, res) => {
   try {
     const userId = req.session.userId;
@@ -236,7 +236,7 @@ app.get("/api/carrito", requireLogin, async (req, res) => {
     const [rows] = await promisePool.query(`
       SELECT c.id_carrito, c.cantidad, p.nombre, p.precio, p.imagen
       FROM carrito c
-      INNER JOIN producto p ON c.id_producto = p.id
+      INNER JOIN producto p ON c.id_producto = p.id_producto
       WHERE c.id_usuario = ?
     `, [userId]);
 
@@ -247,14 +247,12 @@ app.get("/api/carrito", requireLogin, async (req, res) => {
   }
 });
 
-
 // Agregar producto al carrito
 app.post("/api/carrito", requireLogin, async (req, res) => {
   const { id_producto, cantidad } = req.body;
   const userId = req.session.userId;
 
   try {
-    // Verificar si ya existe el producto en el carrito
     const [rows] = await promisePool.query(
       "SELECT * FROM carrito WHERE id_usuario = ? AND id_producto = ?",
       [userId, id_producto]
@@ -272,7 +270,7 @@ app.post("/api/carrito", requireLogin, async (req, res) => {
       );
     }
 
-    res.json({ message: "Producto agregado al carrito 🛒" });
+    res.json({ message: "Producto agregado al carrito 🛍️" });
   } catch (err) {
     console.error("Error al agregar al carrito:", err.message);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -319,7 +317,7 @@ app.delete("/api/carrito", requireLogin, async (req, res) => {
   const userId = req.session.userId;
   try {
     await promisePool.query("DELETE FROM carrito WHERE id_usuario = ?", [userId]);
-    res.json({ message: "Compra realizada con éxito 🧾 Carrito vaciado" });
+    res.json({ message: "Compra realizada con éxito 🎉 Carrito vaciado" });
   } catch (err) {
     console.error("Error al vaciar carrito:", err.message);
     res.status(500).json({ error: "Error interno del servidor" });
