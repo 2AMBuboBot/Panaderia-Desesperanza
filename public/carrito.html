@@ -16,35 +16,34 @@
     <button id="btnLogout" class="btn btn-danger">Cerrar sesión</button>
   </header>
 
-  <main class="contenedor mt-4">
-    <h2 class="titulo-seccion">🧁 Productos en tu carrito</h2>
+ <main class="contenedor mt-4">
+  <h2 class="titulo-seccion">🧁 Productos en tu carrito</h2>
 
-    <div class="table-responsive mt-3">
-      <table class="table table-striped align-middle shadow">
-        <thead class="table-dark">
-          <tr>
-            <th>Imagen</th>
-            <th>Nombre</th>
-            <th>Precio</th>
-            <th>Cantidad</th>
-            <th>Subtotal</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tablaCarrito">
-          <tr><td colspan="6" class="text-center py-4 text-muted">Cargando productos...</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="table-responsive mt-3">
+    <table class="table table-striped align-middle shadow">
+      <thead class="table-dark">
+        <tr>
+          <th>Nombre</th>
+          <th>Precio</th>
+          <th>Cantidad</th>
+          <th>Subtotal</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaCarrito">
+        <tr><td colspan="5" class="text-center py-4 text-muted">Cargando productos...</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <a href="index.html" class="btn btn-outline-primary btn-lg">⬅️ Seguir comprando</a>
-      <div class="text-end">
-        <h3 id="totalCarrito" class="fw-bold">Total: $0.00</h3>
-        <button id="btnPagar" class="btn btn-success btn-lg mt-2">💰 Pagar</button>
-      </div>
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <a href="index.html" class="btn btn-outline-primary btn-lg">⬅️ Seguir comprando</a>
+    <div class="text-end">
+      <h3 id="totalCarrito" class="fw-bold">Total: $0.00</h3>
+      <button id="btnPagar" class="btn btn-success btn-lg mt-2">💰 Pagar</button>
     </div>
-  </main>
+  </div>
+</main>
 
   <footer>
     <p>© 2025 Panadería “La Desesperanza” — Hecho con amor ❤️ y harina</p>
@@ -54,81 +53,123 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const tabla = document.getElementById("tablaCarrito");
-      const totalCarrito = document.getElementById("totalCarrito");
-      const btnLogout = document.getElementById("btnLogout");
-      const btnPagar = document.getElementById("btnPagar");
+  const tabla = document.getElementById("tablaCarrito");
+  const totalCarrito = document.getElementById("totalCarrito");
+  const btnLogout = document.getElementById("btnLogout");
+  const btnPagar = document.getElementById("btnPagar");
 
-      // Cargar carrito
-      fetch("/api/carrito", { credentials: "include" })
-        .then(res => {
-          if (!res.ok) throw new Error("Respuesta no válida del servidor");
-          return res.json();
-        })
-        .then(data => {
-          tabla.innerHTML = ""; // limpiar tabla
-          if (!data || data.length === 0) {
-            tabla.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Tu carrito está vacío 😢</td></tr>';
-            totalCarrito.textContent = "Total: $0.00";
-            return;
-          }
-
-          let total = 0;
-          data.forEach(item => {
-            const subtotal = item.precio * item.cantidad;
-            total += subtotal;
-
-            tabla.innerHTML += `
-              <tr>
-                <td><img src="${item.imagen}" alt="${item.nombre}" class="rounded" width="80"></td>
-                <td>${item.nombre}</td>
-                <td>$${item.precio.toFixed(2)}</td>
-                <td>${item.cantidad}</td>
-                <td>$${subtotal.toFixed(2)}</td>
-                <td>
-                  <button class="btn btn-outline-danger btn-sm eliminar" data-id="${item.id_carrito}" title="Quitar del carrito">🛒</button>
-                </td>
-              </tr>
-            `;
-          });
-
-          totalCarrito.textContent = `Total: $${total.toFixed(2)}`;
-
-          // Eliminar producto del carrito
-          document.querySelectorAll(".eliminar").forEach(btn => {
-            btn.addEventListener("click", e => {
-              const id = e.target.dataset.id;
-              fetch(`/api/carrito/${id}`, {
-                method: "DELETE",
-                credentials: "include"
-              })
-              .then(res => res.json())
-              .then(() => location.reload());
-            });
-          });
-        })
-        .catch(err => {
-          console.error("Error al cargar productos:", err);
-          tabla.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al cargar los productos 😵</td></tr>`;
-        });
-
-      // Botón "Pagar"
-btnPagar.addEventListener("click", () => {
-  fetch("/api/carrito", { method: "DELETE", credentials: "include" })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.message || "Compra realizada con éxito 🎉");
-      location.reload();
+  // 🔹 Cargar carrito
+  fetch("/api/carrito", { credentials: "include" })
+    .then(res => {
+      if (!res.ok) throw new Error("Error al obtener el carrito");
+      return res.json();
     })
-    .catch(() => alert("Error al procesar el pago 😕"));
+    .then(data => {
+      tabla.innerHTML = ""; // limpiar tabla
+
+      if (!Array.isArray(data) || data.length === 0) {
+        tabla.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+              Tu carrito está vacío 😢
+            </td>
+          </tr>`;
+        totalCarrito.textContent = "Total: $0.00";
+        return;
+      }
+
+      let total = 0;
+      data.forEach(item => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+
+        tabla.innerHTML += `
+          <tr>
+            <td>${item.nombre}</td>
+            <td>$${item.precio.toFixed(2)}</td>
+            <td>${item.cantidad}</td>
+            <td>$${subtotal.toFixed(2)}</td>
+            <td>
+              <button class="btn btn-outline-danger btn-sm eliminar" data-id="${item.id_carrito}">
+                🗑️ Eliminar
+              </button>
+            </td>
+          </tr>`;
+      });
+
+      totalCarrito.textContent = `Total: $${total.toFixed(2)}`;
+
+      // 🗑️ Eliminar producto
+      document.querySelectorAll(".eliminar").forEach(btn => {
+        btn.addEventListener("click", e => {
+          const id = e.target.dataset.id;
+          fetch(`/api/carrito/${id}`, {
+            method: "DELETE",
+            credentials: "include"
+          })
+            .then(res => {
+              if (!res.ok) throw new Error("Error al eliminar");
+              return res.json();
+            })
+            .then(() => {
+              e.target.closest("tr").remove();
+              recalcularTotal();
+            })
+            .catch(err => console.error("Error al eliminar:", err));
+        });
+      });
+
+      // 🔄 Recalcular total
+      function recalcularTotal() {
+        let nuevoTotal = 0;
+        tabla.querySelectorAll("tr").forEach(fila => {
+          const subtotalCell = fila.children[3];
+          if (subtotalCell) {
+            const valor = parseFloat(subtotalCell.textContent.replace("$", "")) || 0;
+            nuevoTotal += valor;
+          }
+        });
+        totalCarrito.textContent = `Total: $${nuevoTotal.toFixed(2)}`;
+        if (nuevoTotal === 0) {
+          tabla.innerHTML = `
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                Tu carrito está vacío 😢
+              </td>
+            </tr>`;
+        }
+      }
+    })
+    .catch(err => {
+      console.error("Error al cargar productos:", err);
+      tabla.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center text-danger py-4">
+            Error al cargar los productos 😵
+          </td>
+        </tr>`;
+    });
+
+  // 💳 Pagar
+  btnPagar.addEventListener("click", () => {
+    fetch("/api/carrito", { method: "DELETE", credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || "Compra realizada con éxito 🎉");
+        location.reload();
+      })
+      .catch(() => alert("Error al procesar el pago 😕"));
+  });
+
+  // 🚪 Cerrar sesión
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST", credentials: "include" })
+        .then(() => window.location.href = "login.html");
+    });
+  }
 });
 
-      // Logout
-      btnLogout.addEventListener("click", () => {
-        fetch("/api/logout", { method: "POST", credentials: "include" })
-          .then(() => window.location.href = "login.html");
-      });
-    });
   </script>
 </body>
 </html>
