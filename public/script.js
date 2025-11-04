@@ -60,7 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
  // Agregar al carrito
 document.addEventListener("click", e => {
   if (e.target.classList.contains("btn-agregar")) {
-    const id = e.target.dataset.id;
+  e.stopPropagation(); 
+  const id = e.target.dataset.id;
 
     if (!id) {
       console.error("❌ No se encontró el ID del producto al agregar al carrito");

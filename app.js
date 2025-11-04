@@ -176,12 +176,15 @@ app.post("/api/productos", requireLogin, async (req, res) => {
 
     const userId = req.session.userId;
 
-await promisePool.query(
+const [result] = await promisePool.query(
   "INSERT INTO producto (nombre, descripcion, precio, imagen, id_categoria, user_id) VALUES (?, ?, ?, ?, ?, ?)",
   [nombre, descripcion, precio, imagen, catID, userId]
 );
 
-    res.json({ message: "✅ Producto agregado correctamente" });
+res.json({
+  message: "✅ Producto agregado correctamente",
+  id_producto: result.insertId
+});
   } catch (err) {
     console.error("Error al insertar producto:", err.message);
     res.status(500).json({ error: "Error al insertar producto" });
@@ -246,10 +249,11 @@ app.get("/api/carrito", requireLogin, async (req, res) => {
       WHERE c.id_usuario = ?
     `, [userId]);
 
+    console.log("✅ Carrito obtenido:", rows);
     res.json(rows);
   } catch (err) {
-    console.error("❌ Error al obtener carrito:", err.message);
-    res.status(500).json({ error: "Error al obtener carrito" });
+    console.error("❌ Error al obtener carrito:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -258,10 +262,7 @@ app.post("/api/carrito", requireLogin, async (req, res) => {
   const { id_producto, cantidad } = req.body;
   const userId = req.session.userId;
 
-  console.log("🧠 Datos recibidos en /api/carrito:", req.body); // Debug
-
   try {
-    // 🔍 Validar antes de seguir
     if (!id_producto) {
       console.error("⚠️ No se recibió id_producto en el body");
       return res.status(400).json({ error: "id_producto es requerido" });

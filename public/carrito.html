@@ -79,23 +79,24 @@
       }
 
       let total = 0;
-      data.forEach(item => {
-        const subtotal = item.precio * item.cantidad;
-        total += subtotal;
+data.forEach(item => {
+  const precio = parseFloat(item.precio); // 👈 convierte a número
+  const subtotal = precio * item.cantidad;
+  total += subtotal;
 
-        tabla.innerHTML += `
-          <tr>
-            <td>${item.nombre}</td>
-            <td>$${item.precio.toFixed(2)}</td>
-            <td>${item.cantidad}</td>
-            <td>$${subtotal.toFixed(2)}</td>
-            <td>
-              <button class="btn btn-outline-danger btn-sm eliminar" data-id="${item.id_carrito}">
-                🗑️ Eliminar
-              </button>
-            </td>
-          </tr>`;
-      });
+  tabla.innerHTML += `
+    <tr>
+      <td>${item.nombre}</td>
+      <td>$${precio.toFixed(2)}</td>  <!-- 👈 usa la variable precio -->
+      <td>${item.cantidad}</td>
+      <td>$${subtotal.toFixed(2)}</td>
+      <td>
+        <button class="btn btn-outline-danger btn-sm eliminar" data-id="${item.id_carrito}">
+          🗑️ Eliminar
+        </button>
+      </td>
+    </tr>`;
+});
 
       totalCarrito.textContent = `Total: $${total.toFixed(2)}`;
 
