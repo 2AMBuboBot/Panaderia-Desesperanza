@@ -59,7 +59,7 @@ function requireLogin(req, res, next) {
 
 
 // REGISTRO DEL CLIENTE
-// REGISTRO CLIENTE
+
 app.post("/api/registerCliente", async (req, res) => {
   const { nombre, telefono, email, direccion, password } = req.body;
 
@@ -111,23 +111,36 @@ app.post("/api/loginCliente", async (req, res) => {
 // LOGIN ADMIN
 app.post("/api/loginAdmin", async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
+
+  // Validación básica
+  if (!username || !password) {
+    return res.status(400).json({ mensaje: "Faltan datos: username o password" });
+  }
 
   try {
+    // Buscar usuario
     const [rows] = await promisePool.query(
       "SELECT * FROM usuarios WHERE username = ? AND password = ?",
       [username, password]
     );
 
-    if (rows.length === 0) return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
+    console.log("Query loginAdmin result:", rows); // <-- Verifica qué devuelve la base
 
+    if (rows.length === 0) {
+      return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
+    }
+
+    const user = rows[0];
+
+    // Guardar sesión
     req.session.loggedIn = true;
     req.session.tipo = "admin";
-    req.session.id_admin = rows[0].id;
+    req.session.id_admin = user.id; // Asegúrate que el campo se llame "id" en tu tabla
 
-    res.json({ mensaje: "Login admin exitoso" });
+    res.json({ mensaje: "Login admin exitoso", user: { id: user.id, username: user.username } });
+
   } catch (err) {
-    console.error(err);
+    console.error("Error en loginAdmin:", err);
     res.status(500).json({ mensaje: "Error en el servidor" });
   }
 });
