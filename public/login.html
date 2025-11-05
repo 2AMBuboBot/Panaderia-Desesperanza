@@ -29,6 +29,7 @@
       color: #a4773a;
       text-decoration: none;
       font-weight: 600;
+      cursor: pointer;
     }
 
     a:hover {
@@ -60,25 +61,44 @@
   <header>Panadería La Desesperanza</header>
 
   <main>
-    <div class="login-container" id="loginContainer">
+
+    <!-- LOGIN CLIENTE -->
+    <div class="login-container" id="loginCliente">
       <h2>Iniciar Sesión</h2>
-      <form id="loginForm">
-        <input type="text" id="username" placeholder="Usuario" required>
-        <input type="password" id="password" placeholder="Contraseña" required>
+      <form id="loginClienteForm">
+        <input type="text" id="clienteUser" placeholder="Correo Electronico (cliente)" required>
+        <input type="password" id="clientePass" placeholder="Contraseña" required>
         <button type="submit">Entrar</button>
       </form>
-      <p class="switch">¿No tienes cuenta? <a href="#" id="showRegister">Regístrate aquí</a></p>
+      <p class="switch">¿Eres admin? <a id="showAdmin">Inicia aquí</a></p>
+      <p class="switch">¿No tienes cuenta? <a id="showRegister">Regístrate aquí</a></p>
     </div>
 
+    <!-- LOGIN ADMIN -->
+    <div class="login-container" id="loginAdmin" style="display:none;">
+      <h2>Login Admin</h2>
+      <form id="loginAdminForm">
+        <input type="text" id="adminUser" placeholder="Usuario Admin" required>
+        <input type="password" id="adminPass" placeholder="Contraseña" required>
+        <button type="submit">Entrar (Admin)</button>
+      </form>
+      <p class="switch">¿Eres cliente? <a id="backToCliente">Inicia aquí</a></p>
+    </div>
+
+    <!-- REGISTRO CLIENTE -->
     <div class="login-container" id="registerContainer" style="display:none;">
       <h2>Crear Cuenta</h2>
       <form id="registerForm">
-        <input type="text" id="newUsername" placeholder="Nuevo usuario" required>
-        <input type="password" id="newPassword" placeholder="Nueva contraseña" required>
+        <input type="text" id="newUsername" placeholder="Nombre" required>
+        <input type="text" id="newTelefono" placeholder="Teléfono" required>
+        <input type="email" id="newEmail" placeholder="Correo electrónico" required>
+        <input type="text" id="newDireccion" placeholder="Dirección" required>
+        <input type="password" id="newPassword" placeholder="Contraseña" required>
         <button type="submit">Registrarse</button>
       </form>
-      <p class="switch">¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión aquí</a></p>
+      <p class="switch">¿Ya tienes cuenta? <a id="backToLogin">Inicia sesión aquí</a></p>
     </div>
+
   </main>
 
   <footer><p>© 2025 Panadería La Desesperanza</p></footer>

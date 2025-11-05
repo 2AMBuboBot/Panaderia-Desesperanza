@@ -15,19 +15,28 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("id_categoria").selectedIndex = 0;
   });
 
-  
   // Verificar sesión primero
   fetch("/api/session", { credentials: "include" })
     .then(res => res.json())
     .then(data => {
       if (!data.loggedIn) {
         window.location.href = "login.html";
-      } else {
-        cargarProductos();
+        return;
       }
+
+      // Guardar tipo de usuario
+      window.userType = data.tipo;
+
+      // Si es cliente → ocultar botón de agregar producto
+      if (window.userType === "cliente") {
+        const btnAdd = document.querySelector(".btn-añadir");
+        if (btnAdd) btnAdd.style.display = "none";
+      }
+
+      cargarProductos();
     });
 
-  
+
   // Cargar productos
   function cargarProductos() {
     fetch("/api/productos", { credentials: "include" })
@@ -51,40 +60,47 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           `;
 
+          // Si es cliente → ocultar editar y eliminar
+          if (window.userType === "cliente") {
+            card.querySelector(".btn-editar").style.display = "none";
+            card.querySelector(".btn-eliminar").style.display = "none";
+          }
+
           if (p.id_categoria == 1) trad.appendChild(card);
           else if (p.id_categoria == 2) temp.appendChild(card);
         });
       });
   }
 
- // Agregar al carrito
-document.addEventListener("click", e => {
-  if (e.target.classList.contains("btn-agregar")) {
-  e.stopPropagation(); 
-  const id = e.target.dataset.id;
 
-    if (!id) {
-      console.error("❌ No se encontró el ID del producto al agregar al carrito");
-      alert("Error: producto sin identificador");
-      return;
-    }
+  // Agregar al carrito (sin tocar tu lógica original)
+  document.addEventListener("click", e => {
+    if (e.target.classList.contains("btn-agregar")) {
+      e.stopPropagation();
+      const id = e.target.dataset.id;
 
-    fetch("/api/carrito", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ id_producto: id, cantidad: 1 })
-    })
-      .then(res => {
-        if (!res.ok) throw new Error("Error al agregar al carrito");
-        return res.json();
+      if (!id) {
+        console.error("❌ No se encontró el ID del producto al agregar al carrito");
+        alert("Error: producto sin identificador");
+        return;
+      }
+
+      fetch("/api/carrito", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id_producto: id, cantidad: 1 })
       })
-      .then(data => alert(data.message || "Agregado al carrito 🛒"))
-      .catch(err => console.error("Error al agregar al carrito:", err));
-  }
-});
+        .then(res => {
+          if (!res.ok) throw new Error("Error al agregar al carrito");
+          return res.json();
+        })
+        .then(data => alert(data.message || "Agregado al carrito 🛒"))
+        .catch(err => console.error("Error al agregar al carrito:", err));
+    }
+  });
 
-  
+
   // Click en botones editar / eliminar
   document.addEventListener("click", e => {
     if (e.target.classList.contains("btn-editar")) {
@@ -130,77 +146,78 @@ document.addEventListener("click", e => {
   }
 
 
-  // Agregar o editar producto
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+  // Agregar o editar producto (TUS VALIDACIONES SE RESPETARON EXACTO)
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  const nombre = document.getElementById("nombre").value.trim();
-  const descripcion = document.getElementById("descripcion").value.trim();
-  const precio = parseFloat(document.getElementById("precio").value);
-  const imagen = document.getElementById("imagen").value.trim();
-  const id_categoria = parseInt(document.getElementById("id_categoria").value);
+    const nombre = document.getElementById("nombre").value.trim();
+    const descripcion = document.getElementById("descripcion").value.trim();
+    const precio = parseFloat(document.getElementById("precio").value);
+    const imagen = document.getElementById("imagen").value.trim();
+    const id_categoria = parseInt(document.getElementById("id_categoria").value);
 
-  const regexTexto = /^[^0-9]+$/;
+    const regexTexto = /^[^0-9]+$/;
 
-  // Validaciones
-  if (!regexTexto.test(nombre)) return alert("El nombre no puede contener números");
-  if (!regexTexto.test(descripcion)) return alert("La descripción no puede contener números");
-  if (isNaN(precio) || precio <= 0) return alert("El precio debe ser un número mayor que 0");
+    if (!regexTexto.test(nombre)) return alert("El nombre no puede contener números");
+    if (!regexTexto.test(descripcion)) return alert("La descripción no puede contener números");
+    if (isNaN(precio) || precio <= 0) return alert("El precio debe ser un número mayor que 0");
 
-  const producto = { nombre, descripcion, precio, imagen, id_categoria };
+    const producto = { nombre, descripcion, precio, imagen, id_categoria };
 
-  try {
-    if (editando) {
-      if (!idEditar) return alert("Error: producto sin identificador");
+    try {
+      if (editando) {
+        if (!idEditar) return alert("Error: producto sin identificador");
 
-      const res = await fetch(`/api/productos/${idEditar}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(producto)
-      });
-      const data = await res.json();
-      alert(data.message || "Producto actualizado");
+        const res = await fetch(`/api/productos/${idEditar}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(producto)
+        });
+        const data = await res.json();
+        alert(data.message || "Producto actualizado");
 
-      editando = false;
-      idEditar = null;
-    } else {
-      const res = await fetch("/api/productos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(producto)
-      });
-      const data = await res.json();
-      alert(data.message || "Producto agregado");
+        editando = false;
+        idEditar = null;
+      } else {
+        const res = await fetch("/api/productos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(producto)
+        });
+        const data = await res.json();
+        alert(data.message || "Producto agregado");
+      }
+
+      form.reset();
+      document.getElementById("id_categoria").selectedIndex = 0;
+
+      cargarProductos();
+      bootstrap.Modal.getInstance(modalEl).hide();
+
+    } catch (err) {
+      console.error("Error al guardar producto:", err);
+      alert("Error de conexión con el servidor");
     }
+  });
 
-    form.reset();
-    document.getElementById("id_categoria").selectedIndex = 0;
-
-    cargarProductos();
-    bootstrap.Modal.getInstance(modalEl).hide();
-
-  } catch (err) {
-    console.error("Error al guardar producto:", err);
-    alert("Error de conexión con el servidor");
-  }
-});
 
   // Logout
   if (btnLogout) {
-  btnLogout.addEventListener("click", () => {
-    fetch("/api/logout", { method: "POST", credentials: "include" })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.mensaje || "Sesión cerrada con éxito");
-        window.location.href = "login.html";
-      })
-      .catch(err => {
-        console.error("Error al cerrar sesión:", err);
-        alert("No se pudo cerrar la sesión");
-      });
-  });
-}
+    btnLogout.addEventListener("click", () => {
+      fetch("/api/logout", { method: "POST", credentials: "include" })
+        .then(res => res.json())
+        .then(data => {
+          alert(data.mensaje || "Sesión cerrada con éxito");
+          window.location.href = "login.html";
+        })
+        .catch(err => {
+          console.error("Error al cerrar sesión:", err);
+          alert("No se pudo cerrar la sesión");
+        });
+    });
+  }
 
 });
+

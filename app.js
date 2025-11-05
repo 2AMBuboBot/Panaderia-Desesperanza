@@ -30,7 +30,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-// Para queries con async/await
+
 const promisePool = pool.promise();
 
 
@@ -58,8 +58,33 @@ function requireLogin(req, res, next) {
 }
 
 
-// LOGIN
-app.post("/api/login", async (req, res) => {
+// LOGIN (CLIENTE)
+app.post("/api/loginCliente", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
+
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT * FROM cliente WHERE username = ? AND password = ?",
+      [username, password]
+    );
+
+    if (rows.length === 0) return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
+
+    req.session.loggedIn = true;
+    req.session.tipo = "cliente";
+    req.session.id_cliente = rows[0].id_cliente;
+
+    res.json({ mensaje: "Login cliente exitoso" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: "Error en el servidor" });
+  }
+});
+
+
+// LOGIN ADMIN
+app.post("/api/loginAdmin", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
 
@@ -71,70 +96,57 @@ app.post("/api/login", async (req, res) => {
 
     if (rows.length === 0) return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
 
-    // Guardar sesión
-    req.session.userId = rows[0].id;
-    req.session.username = rows[0].username;
+    req.session.loggedIn = true;
+    req.session.tipo = "admin";
+    req.session.id_admin = rows[0].id;
 
-    res.json({ mensaje: "Inicio de sesión exitoso" });
+    res.json({ mensaje: "Login admin exitoso" });
   } catch (err) {
-    console.error("Error al iniciar sesión:", err);
+    console.error(err);
     res.status(500).json({ mensaje: "Error en el servidor" });
   }
 });
 
 
-// REGISTRAR USUARIO
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password)
+// REGISTRO (CLIENTE)
+app.post("/api/registerCliente", async (req, res) => {
+  const { nombre, telefono, email, direccion, password } = req.body;
+  if (!nombre || !telefono || !email || !direccion || !password)
     return res.status(400).json({ mensaje: "Faltan datos" });
 
+  const username = email; // EL USUARIO SERÁ EL CORREO
+
   try {
-    // Verificar si el usuario ya existe
-    const [rows] = await promisePool.query(
-      "SELECT * FROM usuarios WHERE username = ?",
-      [username]
+    await promisePool.query(
+      "INSERT INTO cliente (nombre, telefono, email, direccion, password, username) VALUES (?, ?, ?, ?, ?, ?)",
+      [nombre, telefono, email, direccion, password, username]
     );
-
-    if (rows.length > 0)
-      return res.status(409).json({ mensaje: "El usuario ya existe" });
-
-    // Insertar nuevo usuario
-    const [result] = await promisePool.query(
-      "INSERT INTO usuarios (username, password) VALUES (?, ?)",
-      [username, password]
-    );
-
-    // Crear sesión automática
-    req.session.userId = result.insertId;
-    req.session.username = username;
-
-    // Devolver éxito
-    res.json({ mensaje: "Usuario registrado correctamente" });
+    res.json({ mensaje: "Cuenta creada correctamente" });
   } catch (err) {
-    console.error("Error al registrar usuario:", err);
-    res.status(500).json({ mensaje: "Error al registrar usuario" });
+    console.error(err);
+    res.status(500).json({ mensaje: "Error al registrar" });
   }
 });
 
 
-// CERRAR SESIÓN
-app.post("/api/logout", (req, res) => {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ mensaje: "Error al cerrar sesión" });
-    res.clearCookie("sid");
-    res.json({ mensaje: "Sesión cerrada" });
+// VER SESION
+app.get("/api/session", (req, res) => {
+  res.json({
+    loggedIn: req.session.loggedIn || false,
+    tipo: req.session.tipo || null,
+    id_cliente: req.session.id_cliente || null,
+    id_admin: req.session.id_admin || null
   });
 });
 
 
-// VERIFICAR SESIÓN
-app.get("/api/session", (req, res) => {
-  if (req.session.userId) {
-    res.json({ loggedIn: true, usuario: req.session.username });
-  } else {
-    res.json({ loggedIn: false });
-  }
+// LOGOUT
+app.post("/api/logout", (req, res) => {
+  req.session.destroy(err => {
+    if (err) return res.status(500).json({ mensaje: "Error al cerrar sesión" });
+    res.clearCookie("connect.sid");
+    res.json({ mensaje: "Sesión cerrada" });
+  });
 });
 
 
@@ -331,19 +343,55 @@ app.delete("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
   }
 });
 
-// Vaciar carrito (al pagar)
+// Vaciar carrito (Pagar - Crear pedido)
 app.delete("/api/carrito", requireLogin, async (req, res) => {
-  const userId = req.session.userId;
+  const id_cliente = req.session.userId; // ahora es cliente
 
   try {
-    await promisePool.query(
-      "DELETE FROM carrito WHERE id_usuario = ?",
-      [userId]
-    );
+    // 1. Obtener productos del carrito
+    const [items] = await promisePool.query(`
+      SELECT c.id_producto, c.cantidad, p.precio 
+      FROM carrito c
+      JOIN producto p ON c.id_producto = p.id_producto
+      WHERE c.id_cliente = ?
+    `, [id_cliente]);
 
-    res.json({ message: "Compra realizada con éxito 🎉 Carrito vaciado" });
+    if (items.length === 0) {
+      return res.json({ message: "Tu carrito está vacío" });
+    }
+
+    // 2. Calcular total del pedido
+    const total = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+
+    // 3. Crear pedido
+    const [pedido] = await promisePool.query(`
+      INSERT INTO pedido (id_cliente, fecha_pedido, total, estado)
+      VALUES (?, NOW(), ?, 'terminado')
+    `, [id_cliente, total]);
+
+    const id_pedido = pedido.insertId;
+
+    // 4. Crear detalle de pedido
+    for (const item of items) {
+      await promisePool.query(`
+        INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
+        VALUES (?, ?, ?, ?, ?)
+      `, [
+        id_pedido,
+        item.id_producto,
+        item.cantidad,
+        item.precio,
+        item.precio * item.cantidad
+      ]);
+    }
+
+    // 5. Vaciar carrito después de crear el pedido
+    await promisePool.query("DELETE FROM carrito WHERE id_cliente = ?", [id_cliente]);
+
+    res.json({ message: "Compra realizada con éxito 🎉 Pedido registrado" });
+
   } catch (err) {
-    console.error("Error al vaciar carrito:", err.message);
+    console.error("Error al procesar la compra:", err.message);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
