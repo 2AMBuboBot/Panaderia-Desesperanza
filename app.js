@@ -237,8 +237,8 @@ app.put("/api/productos/:id", requireLogin, async (req, res) => {
     await promisePool.query(`
       UPDATE producto
       SET nombre=?, descripcion=?, precio=?, imagen=?, id_categoria=?
-      WHERE id_producto=? AND user_id=?
-    `, [nombre, descripcion, precio, imagen, id_categoria, id, userId]);
+      WHERE id_producto=?
+    `, [nombre, descripcion, precio, imagen, id_categoria, id]);
 
     res.json({ message: "✅ Producto actualizado correctamente" });
   } catch (err) {
@@ -252,8 +252,8 @@ app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   const userId = req.session.userId; 
   try {
     const [result] = await promisePool.query(
-      "DELETE FROM producto WHERE id_producto=? AND user_id=?", 
-      [id, userId]
+      "DELETE FROM producto WHERE id_producto=?",
+      [id]
     );
 
     if (result.affectedRows === 0) {
