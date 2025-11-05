@@ -61,48 +61,54 @@ function requireLogin(req, res, next) {
 // REGISTRO DEL CLIENTE
 
 app.post("/api/registerCliente", async (req, res) => {
-  const { nombre, telefono, email, direccion, password } = req.body;
+  const { nombre, telefono = null, email = null, direccion = null, password } = req.body;
 
-  if (!nombre || !email || !password) {
-    return res.status(400).json({ mensaje: "Faltan datos obligatorios" });
-  }
+  if (!nombre || !password)
+    return res.status(400).json({ mensaje: "Nombre y contraseña son obligatorios" });
+
+  const username = email || nombre; // si no hay email, usa el nombre como usuario
 
   try {
     await promisePool.query(
-      "INSERT INTO cliente (nombre, telefono, email, direccion, password) VALUES (?, ?, ?, ?, ?)",
-      [nombre, telefono || null, email, direccion || null, password]
-    );
-    res.json({ mensaje: "Registro exitoso" });
+  "INSERT INTO cliente (nombre, telefono, email, contraseña, direccion) VALUES (?, ?, ?, ?, ?)",
+  [nombre, telefono || null, email || null, password, direccion || null]
+);
+
+    res.json({ mensaje: "Cuenta creada correctamente" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ mensaje: "Error al registrar cliente" });
+    res.status(500).json({ mensaje: "Error al registrar el cliente" });
   }
 });
 
 
 // LOGIN CLIENTE
 app.post("/api/loginCliente", async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password)
-    return res.status(400).json({ mensaje: "Faltan datos" });
+  // Validación básica
+  if (!email || !password) return res.status(400).json({ mensaje: "Correo y contraseña son obligatorios" });
 
   try {
+    // Buscar cliente por correo y contraseña
     const [rows] = await promisePool.query(
-      "SELECT * FROM cliente WHERE nombre = ? AND password = ?",
-      [username, password]
+      "SELECT * FROM cliente WHERE email = ? AND contraseña = ?",
+      [email, password]
     );
 
-    if (rows.length === 0)
-      return res.status(401).json({ mensaje: "Nombre o contraseña incorrectos" });
+    if (rows.length === 0) {
+      return res.status(401).json({ mensaje: "Correo o contraseña incorrectos" });
+    }
 
+    // Guardar sesión
     req.session.loggedIn = true;
     req.session.tipo = "cliente";
     req.session.id_cliente = rows[0].id_cliente;
 
-    res.json({ mensaje: "Bienvenido " + rows[0].nombre });
+    res.json({ mensaje: `Bienvenido ${rows[0].nombre}` });
+
   } catch (err) {
-    console.error(err);
+    console.error("Error en login cliente:", err);
     res.status(500).json({ mensaje: "Error en el servidor" });
   }
 });

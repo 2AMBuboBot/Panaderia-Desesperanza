@@ -71,7 +71,7 @@ document.getElementById("loginCliente").addEventListener("submit", async (e) => 
   const data = await resp.json();
 
   if (resp.ok) {
-    alert(`🎉 Bienvenido, ${username}!`);  // <-- bienvenida
+    alert(`🎉 Bienvenido, ${username}!`); 
     window.location.href = "index.html";
   } else {
     alert(data.mensaje);
@@ -80,47 +80,47 @@ document.getElementById("loginCliente").addEventListener("submit", async (e) => 
 
 
   // REGISTRO CLIENTE
-const registerForm = document.getElementById("registerCliente");
-if (registerForm) {
-  registerForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    const nombre = newUsername.value.trim();
-    const telefono = newTelefono.value.trim();
-    const email = newEmail.value.trim();
-    const direccion = newDireccion.value.trim();
-    const password = newPassword.value.trim();
+  const nombre = document.getElementById("newUsername").value.trim();
+  const telefono = document.getElementById("newTelefono").value.trim() || null;
+  const email = document.getElementById("newEmail").value.trim() || null;
+  const direccion = document.getElementById("newDireccion").value.trim() || null;
+  const password = document.getElementById("newPassword").value.trim();
 
-    if (!nombre) return alert("El nombre es obligatorio.");
-    if (!/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/.test(nombre)) return alert("El nombre solo puede contener letras.");
+  if (!nombre || !password) {
+    return alert("Nombre y contraseña son obligatorios");
+  }
 
-    if (!email) return alert("El correo es obligatorio.");
-    if (!/^\S+@\S+\.\S+$/.test(email)) return alert("Correo inválido.");
+  // Validaciones
+  const regexNombre = /^[A-Za-z\s]+$/;
+  const regexPassword = /^[A-Za-z0-9]+$/;
 
-    if (!password) return alert("La contraseña es obligatoria.");
-    if (!/^[A-Za-z0-9]+$/.test(password)) return alert("La contraseña solo puede contener letras y números.");
+  if (!regexNombre.test(nombre)) return alert("El nombre solo puede contener letras");
+  if (!regexPassword.test(password)) return alert("La contraseña solo puede contener letras y números");
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return alert("Correo no válido");
+  if (telefono && !/^\d{7,15}$/.test(telefono)) return alert("Teléfono no válido");
 
-    // telefono y direccion NO SE VALIDAN COMO OBLIGATORIAS
+  try {
+    const resp = await fetch("/api/registerCliente", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre, telefono, email, direccion, password })
+    });
 
-    try {
-      const resp = await fetch("/api/registerCliente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ nombre, telefono, email, direccion, password })
-      });
+    const data = await resp.json();
+    alert(data.mensaje);
 
-      const data = await resp.json();
-      alert(data.mensaje);
-
-      if (resp.ok) {
-        document.getElementById("backToLogin").click();
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error del servidor.");
+    if (resp.ok) {
+      // Limpiar formulario
+      document.getElementById("registerForm").reset();
+      document.getElementById("backToLogin").click();
     }
-  });
-}
+  } catch (err) {
+    console.error(err);
+    alert("Error al conectarse con el servidor");
+  }
+});
 
 });
