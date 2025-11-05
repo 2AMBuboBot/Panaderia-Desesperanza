@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // LOGIN CLIENTE
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+document.getElementById("loginCliente").addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const username = document.getElementById("username").value.trim();
@@ -39,38 +39,48 @@ document.addEventListener("DOMContentLoaded", () => {
   const resp = await fetch("/api/loginCliente", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ username, password }),
+    credentials: "include"
   });
 
   const data = await resp.json();
-  alert(data.mensaje);
 
-  if (resp.ok) window.location.href = "index.html";
+  if (resp.ok) {
+    alert(`🎉 Bienvenido, ${username}!`);  // <-- bienvenida
+    window.location.href = "index.html";
+  } else {
+    alert(data.mensaje);
+  }
 });
 
 
+
   // LOGIN ADMIN
-  document.getElementById("loginAdminForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const username = document.getElementById("adminUser").value;
-    const password = document.getElementById("adminPass").value;
+  document.getElementById("loginAdmin").addEventListener("submit", async e => {
+  e.preventDefault();
+  const username = document.getElementById("adminUser").value.trim();
+  const password = document.getElementById("adminPass").value.trim();
 
-    const resp = await fetch("/api/loginAdmin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-      credentials: "include"
-    });
-
-    const data = await resp.json();
-    if (resp.ok) window.location.href = "index.html";
-    else alert(data.mensaje);
+  const resp = await fetch("/api/loginAdmin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+    credentials: "include"
   });
+
+  const data = await resp.json();
+
+  if (resp.ok) {
+    alert(`🎉 Bienvenido, ${username}!`);  // <-- bienvenida
+    window.location.href = "index.html";
+  } else {
+    alert(data.mensaje);
+  }
+});
 
 
   // REGISTRO CLIENTE
- // REGISTRO CLIENTE
-const registerForm = document.getElementById("registerForm");
+const registerForm = document.getElementById("registerCliente");
 if (registerForm) {
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();

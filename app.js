@@ -124,8 +124,6 @@ app.post("/api/loginAdmin", async (req, res) => {
       [username, password]
     );
 
-    console.log("Query loginAdmin result:", rows); // <-- Verifica qué devuelve la base
-
     if (rows.length === 0) {
       return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
     }
@@ -177,13 +175,11 @@ app.post("/api/logout", (req, res) => {
 // PRODUCTOS 
 app.get("/api/productos", requireLogin, async (req, res) => {
   try {
-    const userId = req.session.userId;
-const [rows] = await promisePool.query(`
-  SELECT p.*, c.nombre AS categoria
-  FROM producto p
-  LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
-  WHERE p.user_id = ?
-`, [userId]);
+    const [rows] = await promisePool.query(`
+      SELECT p.*, c.nombre AS categoria
+      FROM producto p
+      LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
+    `);
     res.json(rows);
   } catch (err) {
     console.error("Error al obtener productos:", err.message);
