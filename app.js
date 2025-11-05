@@ -84,26 +84,23 @@ app.post("/api/registerCliente", async (req, res) => {
 
 // LOGIN CLIENTE
 app.post("/api/loginCliente", async (req, res) => {
-  const { email, contraseña } = req.body;
-  if (!email || !contraseña)
-    return res.status(400).json({ mensaje: "Email y contraseña son obligatorios" });
+  const { email, password } = req.body;
+
+  if (!email || !password) return res.status(400).json({ mensaje: "Faltan datos" });
 
   try {
     const [rows] = await promisePool.query(
       "SELECT * FROM cliente WHERE email = ? AND contraseña = ?",
-      [email, contraseña]
+      [email, password]
     );
 
-    if (rows.length === 0)
-      return res.status(401).json({ mensaje: "Email o contraseña incorrectos" });
+    if (rows.length === 0) return res.status(401).json({ mensaje: "Correo o contraseña incorrectos" });
 
-    // Guardar sesión
     req.session.loggedIn = true;
     req.session.tipo = "cliente";
     req.session.id_cliente = rows[0].id_cliente;
-    req.session.nombre = rows[0].nombre; 
 
-    res.json({ mensaje: `Bienvenido ${rows[0].nombre}` });
+    res.json({ mensaje: "Login cliente exitoso" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: "Error en el servidor" });
