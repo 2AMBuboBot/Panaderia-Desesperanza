@@ -33,25 +33,24 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("loginCliente").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const email = document.getElementById("username").value.trim(); // input donde antes ponías nombre
+  const contraseña = document.getElementById("password").value.trim();
+
+  if (!email || !contraseña) return alert("Debes ingresar email y contraseña");
 
   const resp = await fetch("/api/loginCliente", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, contraseña }),
     credentials: "include"
   });
 
   const data = await resp.json();
+  alert(data.mensaje);
 
-  if (resp.ok) {
-    alert(`🎉 Bienvenido, ${username}!`);  // <-- bienvenida
-    window.location.href = "index.html";
-  } else {
-    alert(data.mensaje);
-  }
+  if (resp.ok) window.location.href = "index.html"; // redirige directo a productos
 });
+
 
 
 
@@ -115,7 +114,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     if (resp.ok) {
       // Limpiar formulario
       document.getElementById("registerForm").reset();
-      document.getElementById("backToLogin").click();
+      window.location.href = "index.html";
     }
   } catch (err) {
     console.error(err);
