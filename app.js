@@ -58,24 +58,49 @@ function requireLogin(req, res, next) {
 }
 
 
-// LOGIN (CLIENTE)
+// REGISTRO DEL CLIENTE
+// REGISTRO CLIENTE
+app.post("/api/registerCliente", async (req, res) => {
+  const { nombre, telefono, email, direccion, password } = req.body;
+
+  if (!nombre || !email || !password) {
+    return res.status(400).json({ mensaje: "Faltan datos obligatorios" });
+  }
+
+  try {
+    await promisePool.query(
+      "INSERT INTO cliente (nombre, telefono, email, direccion, password) VALUES (?, ?, ?, ?, ?)",
+      [nombre, telefono || null, email, direccion || null, password]
+    );
+    res.json({ mensaje: "Registro exitoso" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ mensaje: "Error al registrar cliente" });
+  }
+});
+
+
+// LOGIN CLIENTE
 app.post("/api/loginCliente", async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ mensaje: "Faltan datos" });
+
+  if (!username || !password)
+    return res.status(400).json({ mensaje: "Faltan datos" });
 
   try {
     const [rows] = await promisePool.query(
-      "SELECT * FROM cliente WHERE username = ? AND password = ?",
+      "SELECT * FROM cliente WHERE nombre = ? AND password = ?",
       [username, password]
     );
 
-    if (rows.length === 0) return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
+    if (rows.length === 0)
+      return res.status(401).json({ mensaje: "Nombre o contraseña incorrectos" });
 
     req.session.loggedIn = true;
     req.session.tipo = "cliente";
     req.session.id_cliente = rows[0].id_cliente;
 
-    res.json({ mensaje: "Login cliente exitoso" });
+    res.json({ mensaje: "Bienvenido " + rows[0].nombre });
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: "Error en el servidor" });
@@ -108,27 +133,6 @@ app.post("/api/loginAdmin", async (req, res) => {
 });
 
 
-// REGISTRO (CLIENTE)
-app.post("/api/registerCliente", async (req, res) => {
-  const { nombre, telefono, email, direccion, password } = req.body;
-  if (!nombre || !telefono || !email || !direccion || !password)
-    return res.status(400).json({ mensaje: "Faltan datos" });
-
-  const username = email; // EL USUARIO SERÁ EL CORREO
-
-  try {
-    await promisePool.query(
-      "INSERT INTO cliente (nombre, telefono, email, direccion, password, username) VALUES (?, ?, ?, ?, ?, ?)",
-      [nombre, telefono, email, direccion, password, username]
-    );
-    res.json({ mensaje: "Cuenta creada correctamente" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ mensaje: "Error al registrar" });
-  }
-});
-
-
 // VER SESION
 app.get("/api/session", (req, res) => {
   res.json({
@@ -137,6 +141,13 @@ app.get("/api/session", (req, res) => {
     id_cliente: req.session.id_cliente || null,
     id_admin: req.session.id_admin || null
   });
+});
+
+// Normalizar ID de usuario en sesión
+app.use((req, res, next) => {
+  if (req.session.tipo === "admin") req.session.userId = req.session.id_admin;
+  if (req.session.tipo === "cliente") req.session.userId = req.session.id_cliente;
+  next();
 });
 
 
