@@ -28,10 +28,16 @@ document.addEventListener("DOMContentLoaded", () => {
       window.userType = data.tipo;
 
       // Si es cliente → ocultar botón de agregar producto
-      if (window.userType === "cliente") {
-        const btnAdd = document.querySelector(".btn-añadir");
-        if (btnAdd) btnAdd.style.display = "none";
-      }
+if (window.userType === "cliente") {
+  const btnAdd = document.querySelector(".btn-añadir");
+  if (btnAdd) btnAdd.style.display = "none";
+}
+
+// Si es admin → ocultar botón ver carrito
+if (window.userType === "admin") {
+  const btnCarrito = document.getElementById("btnCarrito");
+  if (btnCarrito) btnCarrito.style.display = "none";
+}
 
       cargarProductos();
     });
@@ -60,11 +66,15 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           `;
 
-          // Si es cliente → ocultar editar y eliminar
+          
           if (window.userType === "cliente") {
-            card.querySelector(".btn-editar").style.display = "none";
-            card.querySelector(".btn-eliminar").style.display = "none";
-          }
+  // cliente → no puede editar/eliminar
+  card.querySelector(".btn-editar").style.display = "none";
+  card.querySelector(".btn-eliminar").style.display = "none";
+} else if (window.userType === "admin") {
+  // admin → NO puede agregar al carrito
+  card.querySelector(".btn-agregar").style.display = "none";
+}
 
           if (p.id_categoria == 1) trad.appendChild(card);
           else if (p.id_categoria == 2) temp.appendChild(card);
@@ -72,24 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
-  fetch("/api/tipo-sesion")
-  .then(res => res.json())
-  .then(data => {
-    const esAdmin = data.tipo === "admin";
-
-    productos.forEach(p => {
-      const card = document.createElement("div");
-      card.classList.add("producto-card");
-
-      card.innerHTML = `
-        <h4>${p.nombre}</h4>
-        <p>$${p.precio}</p>
-        ${esAdmin ? "" : `<button class="btn btn-success btn-sm btn-agregar" data-id="${p.id_producto}">Agregar 🛒</button>`}
-      `;
-
-      contenedor.appendChild(card);
-    });
-  });
 
   // Agregar al carrito (sin tocar tu lógica original)
   document.addEventListener("click", e => {
@@ -220,13 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  fetch("/api/tipo-sesion")
-  .then(res => res.json())
-  .then(data => {
-    if (data.tipo === "admin") {
-      document.getElementById("btnCarrito").style.display = "none";
-    }
-  });
 
   // Logout
   if (btnLogout) {

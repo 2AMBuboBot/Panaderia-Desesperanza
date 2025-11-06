@@ -133,7 +133,7 @@ app.post("/api/loginAdmin", async (req, res) => {
     // Guardar sesión
     req.session.loggedIn = true;
     req.session.tipo = "admin";
-    req.session.id_admin = user.id; // Asegúrate que el campo se llame "id" en tu tabla
+    req.session.id_admin = user.id; 
 
     res.json({ mensaje: "Login admin exitoso", user: { id: user.id, username: user.username } });
 
@@ -276,58 +276,47 @@ app.delete("/api/productos/:id", requireLogin, async (req, res) => {
   }
 });
 
-// Mostrar productos del carrito del usuario
+// Obtener carrito
 app.get("/api/carrito", requireLogin, async (req, res) => {
+  const id_cliente = req.session.id_cliente;
+
   try {
-    const userId = req.session.userId;
-
     const [rows] = await promisePool.query(`
-      SELECT 
-        c.id_carrito,
-        c.cantidad,
-        p.nombre,
-        p.precio,
-        p.imagen
-      FROM carrito AS c
-      INNER JOIN producto AS p
-        ON c.id_producto = p.id_producto
-      WHERE c.id_usuario = ?
-    `, [userId]);
-    res.json(rows);
+      SELECT c.id_carrito, c.cantidad, p.nombre, p.precio, p.imagen
+      FROM carrito c
+      JOIN producto p ON c.id_producto = p.id_producto
+      WHERE c.id_cliente = ?
+    `, [id_cliente]);
 
+    res.json(rows);
   } catch (err) {
-    console.error("❌ Error al obtener carrito:", err);
-    res.status(500).json({ error: err.message });
+    console.error("❌ Error al obtener carrito:", err.message);
+    res.status(500).json({ error: "Error al obtener el carrito" });
   }
 });
 
-// Agregar producto al carrito
+// Agregar al carrito
 app.post("/api/carrito", requireLogin, async (req, res) => {
   const { id_producto, cantidad } = req.body;
   const id_cliente = req.session.id_cliente;
 
   try {
-    if (!id_producto) {
-      console.error("⚠️ No se recibió id_producto en el body");
-      return res.status(400).json({ error: "id_producto es requerido" });
-    }
-
-    // Buscar si ya existe el producto en el carrito
+    // Ver si el producto ya está en el carrito
     const [rows] = await promisePool.query(
-  "SELECT * FROM carrito WHERE id_cliente = ? AND id_producto = ?",
-  [id_cliente, id_producto]
-);
+      "SELECT * FROM carrito WHERE id_cliente = ? AND id_producto = ?",
+      [id_cliente, id_producto]
+    );
 
     if (rows.length > 0) {
       await promisePool.query(
-        "UPDATE carrito SET cantidad = cantidad + ? WHERE id_usuario = ? AND id_producto = ?",
-        [cantidad || 1, userId, id_producto]
+        "UPDATE carrito SET cantidad = cantidad + ? WHERE id_cliente = ? AND id_producto = ?",
+        [cantidad || 1, id_cliente, id_producto]
       );
     } else {
       await promisePool.query(
-  "INSERT INTO carrito (id_cliente, id_producto, cantidad) VALUES (?, ?, ?)",
-  [id_cliente, id_producto, cantidad || 1]
-);
+        "INSERT INTO carrito (id_cliente, id_producto, cantidad) VALUES (?, ?, ?)",
+        [id_cliente, id_producto, cantidad || 1]
+      );
     }
 
     res.json({ message: "Producto agregado al carrito 🛍️" });
@@ -355,7 +344,7 @@ app.put("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
   }
 });
 
-// Eliminar producto del carrito
+// Eliminar del carrito
 app.delete("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
   const { id_carrito } = req.params;
   const id_cliente = req.session.id_cliente;
@@ -367,67 +356,72 @@ app.delete("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
     );
     res.json({ message: "Producto eliminado del carrito" });
   } catch (err) {
-    console.error("Error al eliminar del carrito:", err.message);
+    console.error("❌ Error al eliminar producto:", err.message);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
-// Vaciar carrito (Pagar - Crear pedido)
-app.delete("/api/carrito", requireLogin, async (req, res) => {
-  const id_cliente = req.session.userId; // ahora es cliente
+// Pagar (crear pedido)
+app.post("/api/pagar", requireLogin, async (req, res) => {
+  const id_cliente = req.session.id_cliente;
 
   try {
     // 1. Obtener productos del carrito
-    const [items] = await promisePool.query(`
-      SELECT c.id_producto, c.cantidad, p.precio 
+    const [carrito] = await promisePool.query(`
+      SELECT c.id_producto, c.cantidad, p.precio
       FROM carrito c
       JOIN producto p ON c.id_producto = p.id_producto
       WHERE c.id_cliente = ?
     `, [id_cliente]);
 
-    if (items.length === 0) {
-      return res.json({ message: "Tu carrito está vacío" });
+    if (carrito.length === 0) {
+      return res.status(400).json({ mensaje: "Tu carrito está vacío" });
     }
 
-    // 2. Calcular total del pedido
-    const total = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    // 2. Calcular total
+    let total = 0;
+    carrito.forEach(item => {
+      total += item.precio * item.cantidad;
+    });
 
     // 3. Crear pedido
-    const [pedido] = await promisePool.query(`
+    const [result] = await promisePool.query(`
       INSERT INTO pedido (id_cliente, fecha_pedido, total, estado)
-      VALUES (?, NOW(), ?, 'terminado')
+      VALUES (?, NOW(), ?, 'pagado')
     `, [id_cliente, total]);
 
-    const id_pedido = pedido.insertId;
+    const id_pedido = result.insertId; // obtener id del pedido creado
 
-    // 4. Crear detalle de pedido
-    for (const item of items) {
-      await promisePool.query(`
-        INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
-        VALUES (?, ?, ?, ?, ?)
-      `, [
-        id_pedido,
-        item.id_producto,
-        item.cantidad,
-        item.precio,
-        item.precio * item.cantidad
-      ]);
-    }
+    // 4. Insertar detalle por producto
+    const detalleData = carrito.map(item => [
+      id_pedido,
+      item.id_producto,
+      item.cantidad,
+      item.precio,
+      item.precio * item.cantidad
+    ]);
 
-    // 5. Vaciar carrito después de crear el pedido
-    await promisePool.query("DELETE FROM carrito WHERE id_cliente = ?", [id_cliente]);
+    await promisePool.query(`
+      INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
+      VALUES ?
+    `, [detalleData]);
 
-    res.json({ message: "Compra realizada con éxito 🎉 Pedido registrado" });
+    // 5. Vaciar carrito
+    await promisePool.query(`
+      DELETE FROM carrito WHERE id_cliente = ?
+    `, [id_cliente]);
+
+    res.json({ mensaje: "Compra realizada con éxito 🎉", id_pedido, total });
 
   } catch (err) {
-    console.error("Error al procesar la compra:", err.message);
-    res.status(500).json({ error: "Error interno del servidor" });
+    console.error("❌ Error al pagar:", err.message);
+    res.status(500).json({ mensaje: "Error al procesar el pago" });
   }
 });
 
 // Obtener carrito del cliente logueado
 app.get("/api/carrito", requireLogin, async (req, res) => {
-  const id_cliente = req.session.id_cliente; // <-- cliente
+  const id_cliente = req.session.id_cliente; 
 
   try {
     const [rows] = await promisePool.query(`

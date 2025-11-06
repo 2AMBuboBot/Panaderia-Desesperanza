@@ -155,17 +155,23 @@ fetch("/api/carrito", { credentials: "include" })
   });
 
   // Pagar
-  btnPagar.addEventListener("click", () => {
-  fetch("/api/carrito", { 
-    method: "DELETE", 
-    credentials: "include" 
-  })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.message || "Compra realizada con éxito 🎉");
-      location.reload();
-    })
-    .catch(() => alert("Error al procesar el pago 😕"));
+  document.getElementById("btnPagar").addEventListener("click", async () => {
+  if (!confirm("¿Confirmar compra?")) return;
+
+  try {
+    const resp = await fetch("/api/pagar", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    const data = await resp.json();
+    alert(data.mensaje);
+
+    if (resp.ok) location.reload(); 
+  } catch (err) {
+    console.error(err);
+    alert("Error al procesar el pago");
+  }
 });
 
   // Cerrar sesión
