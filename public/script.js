@@ -72,6 +72,24 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
+  fetch("/api/tipo-sesion")
+  .then(res => res.json())
+  .then(data => {
+    const esAdmin = data.tipo === "admin";
+
+    productos.forEach(p => {
+      const card = document.createElement("div");
+      card.classList.add("producto-card");
+
+      card.innerHTML = `
+        <h4>${p.nombre}</h4>
+        <p>$${p.precio}</p>
+        ${esAdmin ? "" : `<button class="btn btn-success btn-sm btn-agregar" data-id="${p.id_producto}">Agregar 🛒</button>`}
+      `;
+
+      contenedor.appendChild(card);
+    });
+  });
 
   // Agregar al carrito (sin tocar tu lógica original)
   document.addEventListener("click", e => {
@@ -146,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  // Agregar o editar producto (TUS VALIDACIONES SE RESPETARON EXACTO)
+  // Agregar o editar producto 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -202,6 +220,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  fetch("/api/tipo-sesion")
+  .then(res => res.json())
+  .then(data => {
+    if (data.tipo === "admin") {
+      document.getElementById("btnCarrito").style.display = "none";
+    }
+  });
 
   // Logout
   if (btnLogout) {

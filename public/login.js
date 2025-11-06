@@ -33,8 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("loginClienteForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const email = document.getElementById("username").value.trim(); // este input debe decir "Correo"
-  const password = document.getElementById("password").value.trim();
+  const email = document.getElementById("clienteUser").value.trim(); 
+  const password = document.getElementById("clientePass").value.trim();
 
   if (!email || !password) return alert("Correo y contraseña son obligatorios");
 
@@ -42,15 +42,14 @@ document.getElementById("loginClienteForm").addEventListener("submit", async (e)
     const resp = await fetch("/api/loginCliente", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      credentials: "include"
+      credentials: "include",
+      body: JSON.stringify({ email, password })
     });
 
     const data = await resp.json();
     alert(data.mensaje);
 
     if (resp.ok) {
-      // Redirigir al index al iniciar sesión
       window.location.href = "index.html";
     }
   } catch (err) {
