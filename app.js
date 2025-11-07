@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -46,8 +46,8 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60, // 1 hora
     httpOnly: true,
-    secure: false,
-    sameSite: "lax"
+    secure: true,
+    sameSite: "none"
   }
 }));
 
