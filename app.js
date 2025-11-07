@@ -35,8 +35,6 @@ const pool = mysql.createPool({
 }).promise();
 
 
-const promisePool = pool.promise();
-
 
 // Sesiones
 const sessionStore = new MySQLStore({}, pool);
