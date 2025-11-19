@@ -9,12 +9,49 @@
   <link rel="icon" type="image/png" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s">
 </head>
 <body>
-  <header class="encabezado">
-    <h1>🥐 Panadería <span>“La Desesperanza”</span></h1>
-    <p class="subtitulo">El sabor de lo artesanal</p>
-    <button id="btnLogout" class="btn btn-danger">Cerrar sesión</button>
-    <a href="carrito.html" id="btnCarrito" class="btn btn-outline-dark">🛒 Ver carrito</a>
-  </header>
+  <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-2">
+  <div class="container-fluid">
+
+    <!-- IZQUIERDA: Nombre -->
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s"
+           alt="Logo" width="35" class="me-2">
+      <span class="fw-bold">Panadería <span class="text-warning">La Desesperanza</span></span>
+    </a>
+
+    <!-- BOTÓN HAMBURGUESA RESPONSIVE -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- MENÚ -->
+    <div class="collapse navbar-collapse" id="menuPrincipal">
+
+      <!-- CENTRO: Navegación -->
+      <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link fw-semibold" href="index.html">Tienda</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-semibold" href="/sobre">Sobre nosotros</a>
+        </li>
+      </ul>
+
+      <!-- DERECHA: Carrito + Logout -->
+      <div class="d-flex align-items-center gap-3">
+        <a href="carrito.html" class="btn btn-outline-dark">
+          🛒 Carrito
+        </a>
+
+        <button id="btnLogout" class="btn btn-danger">
+          Cerrar sesión
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+</header>
 
   <main class="contenedor">
     <div class="text-end mb-4">

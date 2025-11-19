@@ -18,6 +18,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
 // Conexión MySQL
 const pool = mysql.createPool({
@@ -409,6 +411,9 @@ app.post("/api/pagar", requireLogin, async (req, res) => {
   }
 });
 
+app.get("/sobre", (req, res) => {
+  res.render("sobre"); // SIN .ejs
+});
 
 // Servidor
 app.listen(PORT, () => {

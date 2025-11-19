@@ -135,3 +135,20 @@ button {
 button:hover {
   background-color: #a4773a;
 }
+
+.navbar .nav-link {
+  color: #333 !important;
+  font-size: 1.1rem;
+}
+
+.navbar .nav-link:hover {
+  color: #f39c12 !important;
+}
+
+.navbar-brand span {
+  font-size: 1.3rem;
+}
+
+header img {
+  border-radius: 50%;
+}
