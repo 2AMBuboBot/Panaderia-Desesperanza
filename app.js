@@ -68,20 +68,36 @@ app.post("/api/registerCliente", async (req, res) => {
   if (!nombre || !password)
     return res.status(400).json({ mensaje: "Nombre y contraseña son obligatorios" });
 
-  const username = email || nombre; // si no hay email, usa el nombre como usuario
-
   try {
-    await promisePool.query(
-  "INSERT INTO cliente (nombre, telefono, email, contraseña, direccion) VALUES (?, ?, ?, ?, ?)",
-  [nombre, telefono || null, email || null, password, direccion || null]
-);
+    // Registrar cliente
+    const [result] = await promisePool.query(
+      "INSERT INTO cliente (nombre, telefono, email, contraseña, direccion) VALUES (?, ?, ?, ?, ?)",
+      [nombre, telefono, email, password, direccion]
+    );
 
-    res.json({ mensaje: "Cuenta creada correctamente" });
+    const id_cliente = result.insertId;
+
+    // 🔥 INICIAR SESIÓN AUTOMÁTICAMENTE
+    req.session.loggedIn = true;
+    req.session.tipo = "cliente";
+    req.session.id_cliente = id_cliente;
+    req.session.userId = id_cliente;
+
+    console.log("Cliente registrado y logueado:", id_cliente);
+
+    // 🔥 Importantísimo: responder con redirect
+    return res.json({
+      ok: true,
+      mensaje: "Cuenta creada correctamente",
+      redirect: "/index.html"
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ mensaje: "Error al registrar el cliente" });
   }
 });
+
 
 
 // LOGIN CLIENTE

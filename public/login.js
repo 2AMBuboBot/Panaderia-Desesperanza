@@ -118,11 +118,9 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     const data = await resp.json();
     alert(data.mensaje);
 
-    if (resp.ok) {
-      // Limpiar formulario
-      document.getElementById("registerForm").reset();
-      window.location.href = "index.html";
-    }
+    if (data.ok && data.redirect) {
+  window.location.href = data.redirect;
+}
   } catch (err) {
     console.error(err);
     alert("Error al conectarse con el servidor");
