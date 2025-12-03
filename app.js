@@ -428,8 +428,39 @@ app.post("/api/pagar", requireLogin, async (req, res) => {
 });
 
 app.get("/sobre", (req, res) => {
-  res.render("sobre"); // SIN .ejs
+  res.render("sobre"); 
 });
+
+app.get("/ventas", (req, res) => {
+  if (req.session.tipo !== "admin") {
+    return res.status(403).send("No autorizado");
+  }
+  res.render("ventas");
+});
+
+app.get("/api/ventas", async (req, res) => {
+  if (req.session.tipo !== "admin") return res.status(403).json({ error: "No autorizado" });
+
+  try {
+    const [rows] = await promisePool.query(`
+      SELECT p.nombre, SUM(dp.cantidad) AS total
+      FROM detalle_pedido dp
+      JOIN producto p ON dp.id_producto = p.id_producto
+      GROUP BY p.id_producto
+      ORDER BY total DESC
+    `);
+
+    res.json({
+      productos: rows.map(r => r.nombre),
+      cantidades: rows.map(r => r.total)
+    });
+
+  } catch (err) {
+    console.error("Error al obtener ventas:", err);
+    res.status(500).json({ error: "Error en servidor" });
+  }
+});
+
 
 // Servidor
 app.listen(PORT, () => {

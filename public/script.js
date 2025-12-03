@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("id_categoria").selectedIndex = 0;
   });
 
+
   // Verificar sesión primero
   fetch("/api/session", { credentials: "include" })
     .then(res => res.json())
@@ -26,6 +27,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Guardar tipo de usuario
       window.userType = data.tipo;
+
+      const menuVentas = document.getElementById("menuVentas");
+if (menuVentas && window.userType === "admin") {
+  menuVentas.style.display = "block";
+}
 
       // Si es cliente → ocultar botón de agregar producto
 if (window.userType === "cliente") {

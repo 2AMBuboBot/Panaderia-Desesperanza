@@ -13,14 +13,14 @@
   <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-2">
   <div class="container-fluid">
 
-    <!-- IZQUIERDA: Nombre -->
+    
     <a class="navbar-brand d-flex align-items-center" href="#">
       <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s"
            alt="Logo" width="35" class="me-2">
       <span class="fw-bold">Panadería <span class="text-warning">La Desesperanza</span></span>
     </a>
 
-    <!-- BOTÓN HAMBURGUESA RESPONSIVE -->
+    
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -29,14 +29,13 @@
     <div class="collapse navbar-collapse" id="menuPrincipal">
 
       <!-- CENTRO: Navegación -->
-      <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link fw-semibold" href="index.html">Tienda</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link fw-semibold" href="/sobre">Sobre nosotros</a>
-        </li>
-      </ul>
+      <ul class="nav mb-2 mb-md-0 justify-content-center flex-grow-1">
+  <li><a href="index.html" class="nav-link px-2 text-dark">Tienda</a></li>
+<li><a href="/sobre" class="nav-link px-2 text-dark">Sobre Nosotros</a></li>
+  <li id="menuVentas" style="display:none;">
+    <a href="/ventas" class="nav-link px-2 text-warning fw-semibold">Ventas</a>
+  </li>
+</ul>
 
       <!-- DERECHA: Carrito + Logout -->
       <div class="d-flex align-items-center gap-3">
@@ -96,6 +95,15 @@
   const totalCarrito = document.getElementById("totalCarrito");
   const btnLogout = document.getElementById("btnLogout");
   const btnPagar = document.getElementById("btnPagar");
+
+      fetch("/api/session")
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.loggedIn && data.role === "admin") {
+        document.getElementById("menuVentas").style.display = "block";
+      }
+    })
+    .catch(err => console.error("Error verificando sesión:", err));
 
   //Cargar carrito
 fetch("/api/carrito", { credentials: "include" })

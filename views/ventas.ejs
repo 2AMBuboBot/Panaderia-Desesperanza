@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ventas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>Reporte de Ventas</h1>
+    <canvas id="graficaVentas" width="400" height="200"></canvas>
+  </div>
+
+  <script>
+    async function cargarDatos() {
+      const resp = await fetch("/api/ventas");
+      const data = await resp.json();
+
+      const ctx = document.getElementById("graficaVentas");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.productos,
+          datasets: [{
+            label: "Productos vendidos",
+            data: data.cantidades
+          }]
+        }
+      });
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>
