@@ -37,6 +37,16 @@
 
 </head>
 
+<script>
+fetch("/api/session", { credentials: "include" })
+  .then(r => r.json())
+  .then(data => {
+    if (data.loggedIn && data.tipo === "admin") {
+      document.getElementById("menuVentas").style.display = "block";
+    }
+  });
+</script>
+
 <body>
   <!-- NAVBAR (igual que el index) -->
   <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-2">
@@ -57,10 +67,13 @@
       <div class="collapse navbar-collapse" id="menuPrincipal">
 
         <!-- CENTRO -->
-        <ul class="navbar-nav mx-auto">
-          <li class="nav-item"><a class="nav-link fw-semibold" href="index.html">Tienda</a></li>
-          <a class="nav-link fw-semibold" href="/sobre">Sobre nosotros</a></li>
-        </ul>
+        <ul class="nav mb-2 mb-md-0 justify-content-center flex-grow-1">
+  <li><a href="index.html" class="nav-link px-2 text-white">Tienda</a></li>
+  <li><a href="/sobre" class="nav-link px-2 text-white">Sobre Nosotros</a></li>
+  <li id="menuVentas" style="display:none;">
+    <a href="/ventas" class="nav-link px-2 text-warning fw-semibold">Ventas</a>
+  </li>
+</ul>
 
         <!-- DERECHA -->
         <div class="d-flex align-items-center gap-3">

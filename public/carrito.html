@@ -96,14 +96,13 @@
   const btnLogout = document.getElementById("btnLogout");
   const btnPagar = document.getElementById("btnPagar");
 
-      fetch("/api/session")
-    .then(resp => resp.json())
-    .then(data => {
-      if (data.loggedIn && data.role === "admin") {
-        document.getElementById("menuVentas").style.display = "block";
-      }
-    })
-    .catch(err => console.error("Error verificando sesión:", err));
+fetch("/api/session", { credentials: "include" })
+  .then(r => r.json())
+  .then(data => {
+    if (data.loggedIn && data.tipo === "admin") {
+      document.getElementById("menuVentas").style.display = "block";
+    }
+  });
 
   //Cargar carrito
 fetch("/api/carrito", { credentials: "include" })
