@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Reporte de Ventas</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="/css/estilos.css">
+  <link rel="stylesheet" href="style.css">
   <style>
     /* AJUSTES ESPECÍFICOS DE ESTA PÁGINA */
     .contenedor-ventas {
@@ -35,37 +35,46 @@
 </head>
 <body>
 
-<header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-2">
+<header class="navbar navbar-expand-lg navbar-light shadow-sm px-4 py-2" 
+        style="background: linear-gradient(90deg, #b9935a, #a4773a);">
+
   <div class="container-fluid">
 
     <!-- IZQUIERDA: Logo -->
-    <a class="navbar-brand d-flex align-items-center" href="/">
+    <a class="navbar-brand d-flex align-items-center" href="/index.html">
       <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s"
-           alt="Logo" width="35" class="me-2">
-      <span class="fw-bold">Panadería <span class="text-warning">La Desesperanza</span></span>
+           alt="Logo" width="35" class="me-2" style="border-radius:50%;">
+      <span class="fw-bold text-white">
+        Panadería <span class="text-warning">La Desesperanza</span>
+      </span>
     </a>
 
+    <!-- TOGGLE RESPONSIVE -->
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <!-- MENÚ -->
     <div class="collapse navbar-collapse" id="menuPrincipal">
+
+      <!-- CENTRO: Navegación -->
       <ul class="nav mb-2 mb-md-0 justify-content-center flex-grow-1">
         <li><a href="/index.html" class="nav-link px-2 text-white">Tienda</a></li>
         <li><a href="/sobre" class="nav-link px-2 text-white">Sobre Nosotros</a></li>
+
+        <!-- SOLO ADMIN -->
         <li id="menuVentas" style="display:none;">
           <a href="/ventas" class="nav-link px-2 text-warning fw-semibold">Ventas</a>
         </li>
       </ul>
 
-      <!-- DERECHA -->
+      <!-- DERECHA: Carrito + Logout -->
       <div class="d-flex align-items-center gap-3">
-        <a href="/carrito.html" class="btn btn-outline-dark">🛒 Carrito</a>
+        <a href="/carrito.html" class="btn btn-outline-light">🛒 Carrito</a>
         <button id="btnLogout" class="btn btn-danger">Cerrar sesión</button>
       </div>
-    </div>
 
+    </div>
   </div>
 </header>
 
@@ -77,18 +86,16 @@
 </main>
 
 <footer>
-  <p>© 2025 Panadería “La Desesperanza” — Del horno a tu mesa 🥐</p>
+  <p>© 2025 Panadería “La Desesperanza” — Hecho con ❤️ y harina</p>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // Mostrar botón ventas solo si es admin
-fetch('/api/session')
-  .then(res => res.json())
+fetch("/api/session")
+  .then(r => r.json())
   .then(data => {
-    if (data.rol === 'admin') {
-      document.getElementById("menuVentas").style.display = "block";
-    }
+    if (data.tipo === "admin") document.getElementById("menuVentas").style.display = "block";
   });
 
 // Cerrar sesión
