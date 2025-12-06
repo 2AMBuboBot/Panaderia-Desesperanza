@@ -619,32 +619,105 @@ app.get('/api/ticket/:id_compra', requireLogin, async (req, res) => {
     `, [id_compra]);
 
     // Generar PDF con PDFKit
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+const doc = new PDFDocument({ margin: 40, size: 'A4' });
 
-    // Headers para descarga
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=ticket_${id_compra}.pdf`);
+// Headers para descarga
+res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', `attachment; filename=ticket_${id_compra}.pdf`);
 
-    // Pipe al response
-    doc.pipe(res);
+// Pipe al response
+doc.pipe(res);
 
-    // Contenido del ticket
-    doc.fontSize(18).text('Panadería La Desesperanza', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(12).text(`Fecha: ${new Date(compra.fecha_compra).toLocaleString()}`);
-    doc.text(`Número de venta: ${compra.id_compra}`);
-    doc.moveDown(0.5);
+/* ===============================
+   ENCABEZADO
+================================ */
+doc
+  .fontSize(22)
+  .font('Helvetica-Bold')
+  .text('Panadería La Desesperanza', { align: 'center' });
 
-    doc.fontSize(14).text('Productos:', { underline: true });
-    doc.moveDown(0.3);
+doc.moveDown(0.3);
 
-    detalles.forEach(d => {
-      doc.fontSize(12).text(`${d.cantidad} x ${d.nombre}  —  $${parseFloat(d.precio_unitario).toFixed(2)}  =  $${parseFloat(d.subtotal).toFixed(2)}`);
-    });
+doc
+  .fontSize(10)
+  .font('Helvetica-Oblique')
+  .text('¡Gracias por su compra! 💀', { align: 'center' });
 
-    doc.moveDown(0.5);
-    doc.fontSize(14).text(`Total a pagar: $${parseFloat(compra.total).toFixed(2)}`, { align: 'right' });
+doc.moveDown(1);
 
+// Línea decorativa
+doc
+  .moveTo(40, doc.y)
+  .lineTo(550, doc.y)
+  .stroke();
+
+/* ===============================
+   INFO DE COMPRA
+================================ */
+doc.moveDown(1);
+
+doc.fontSize(12).font('Helvetica-Bold').text(`Folio: ${compra.id_compra}`);
+doc.moveDown(0.2);
+
+doc
+  .fontSize(12)
+  .font('Helvetica')
+  .text(`Fecha: ${new Date(compra.fecha_compra).toLocaleString()}`);
+
+doc.moveDown(0.8);
+
+// Línea decorativa
+doc
+  .moveTo(40, doc.y)
+  .lineTo(550, doc.y)
+  .stroke();
+
+/* ===============================
+   LISTA DE PRODUCTOS
+================================ */
+doc.moveDown(1);
+doc.fontSize(14).font('Helvetica-Bold').text('Productos:');
+
+doc.moveDown(0.5);
+
+detalles.forEach((d) => {
+  doc
+    .fontSize(12)
+    .font('Helvetica')
+    .text(
+      `${d.cantidad} × ${d.nombre}`,
+      { continued: true }
+    )
+    .text(
+      `  $${parseFloat(d.subtotal).toFixed(2)}`,
+      { align: 'right' }
+    );
+});
+
+doc.moveDown(0.8);
+
+// Línea decorativa
+doc
+  .moveTo(40, doc.y)
+  .lineTo(550, doc.y)
+  .stroke();
+
+/* ===============================
+   TOTAL
+================================ */
+doc.moveDown(1);
+
+doc
+  .fontSize(16)
+  .font('Helvetica-Bold')
+  .text(
+    `TOTAL: $${parseFloat(compra.total).toFixed(2)}`,
+    { align: 'right' }
+  );
+
+/* ===============================
+   FINALIZAR PDF
+================================ */
     doc.end();
   } catch (err) {
     console.error('Error generando ticket:', err);
