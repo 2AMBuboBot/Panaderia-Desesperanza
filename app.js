@@ -641,7 +641,7 @@ doc.moveDown(0.3);
 doc
   .fontSize(10)
   .font('Helvetica-Oblique')
-  .text('¡Gracias por su compra! 💀', { align: 'center' });
+  .text('¡Gracias por su compra!', { align: 'center' });
 
 doc.moveDown(1);
 
