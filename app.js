@@ -425,7 +425,8 @@ app.post('/api/pagar', requireLogin, async (req, res) => {
 
     // Insertar compra
     const [compraResult] = await conn.query(`
-      INSERT INTO compra (id_cliente, fecha_compra, total, metodo) VALUES (?, NOW(), ?, 'saldo')
+      INSERT INTO compra (id_cliente, fecha_compra, total)
+VALUES (?, NOW(), ?)
     `, [id_cliente, total]);
     const id_compra = compraResult.insertId;
 
