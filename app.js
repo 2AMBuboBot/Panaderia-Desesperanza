@@ -476,7 +476,7 @@ app.get("/api/ventas", async (req, res) => {
   try {
     const [rows] = await promisePool.query(`
       SELECT p.nombre, SUM(dp.cantidad) AS total
-      FROM detalle_pedido dp
+      FROM detalle_compra dp
       JOIN producto p ON dp.id_producto = p.id_producto
       GROUP BY p.id_producto
       ORDER BY total DESC
