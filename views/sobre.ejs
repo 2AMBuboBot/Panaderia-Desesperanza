@@ -48,42 +48,41 @@ fetch("/api/session", { credentials: "include" })
 </script>
 
 <body>
-  <!-- NAVBAR (igual que el index) -->
   <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-2">
-    <div class="container-fluid">
+  <div class="container-fluid">
 
-      <!-- IZQUIERDA -->
-      <a class="navbar-brand d-flex align-items-center" href="index.html">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s"
-             alt="Logo" width="35" class="me-2">
-        <span class="fw-bold">Panadería <span class="text-warning">La Desesperanza</span></span>
-      </a>
+    <!-- IZQUIERDA -->
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s"
+           alt="Logo" width="35" class="me-2">
+      <span class="fw-bold">Panadería <span class="text-warning">La Desesperanza</span></span>
+    </a>
 
-      <!-- MENU RESPONSIVE -->
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+    <!-- MENU RESPONSIVE -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-      <div class="collapse navbar-collapse" id="menuPrincipal">
+    <div class="collapse navbar-collapse" id="menuPrincipal">
 
-        <!-- CENTRO -->
-        <ul class="nav mb-2 mb-md-0 justify-content-center flex-grow-1">
-  <li><a href="index.html" class="nav-link px-2 text-white">Tienda</a></li>
-  <li><a href="/sobre" class="nav-link px-2 text-white">Sobre Nosotros</a></li>
-  <li id="menuVentas" style="display:none;">
-    <a href="/ventas" class="nav-link px-2 text-warning fw-semibold">Ventas</a>
-  </li>
-</ul>
+      <!-- CENTRO -->
+      <ul class="nav mb-2 mb-md-0 justify-content-center flex-grow-1">
+        <li><a href="index.html" class="nav-link px-2 text-white">Tienda</a></li>
+        <li><a href="/sobre" class="nav-link px-2 text-white">Sobre Nosotros</a></li>
+        <li id="menuVentas" style="display:none;">
+          <a href="/ventas" class="nav-link px-2 text-warning fw-semibold">Ventas</a>
+        </li>
+      </ul>
 
-        <!-- DERECHA -->
-        <div class="d-flex align-items-center gap-3">
-          <a href="carrito.html" class="btn btn-outline-dark">🛒 Carrito</a>
-          <button id="btnLogout" class="btn btn-danger">Cerrar sesión</button>
-        </div>
-
+      <!-- DERECHA -->
+      <div class="d-flex align-items-center gap-3">
+        <a href="carrito.html" class="btn btn-outline-dark">🛒 Carrito</a>
+        <button id="btnLogout" class="btn btn-danger">Cerrar sesión</button>
       </div>
+
     </div>
-  </header>
+  </div>
+</header>
 
   <main class="container my-5">
 

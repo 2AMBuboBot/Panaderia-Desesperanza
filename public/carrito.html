@@ -203,17 +203,18 @@ fetch("/api/carrito", { credentials: "include" })
   // Pagar
   document.getElementById("btnPagar").addEventListener("click", async () => {
   if (!confirm("¿Confirmar compra?")) return;
-
   try {
     const resp = await fetch("/api/pagar", {
       method: "POST",
       credentials: "include"
     });
-
     const data = await resp.json();
-    alert(data.mensaje);
-
-    if (resp.ok) location.reload(); 
+    if (!resp.ok) return alert(data.mensaje || data.error || 'Error al pagar');
+    alert(data.mensaje || 'Compra ok');
+    // abrir ticket en nueva pestaña
+    if (data.ticket) window.open(data.ticket, '_blank');
+    // recargar pagina carrito o index
+    location.reload();
   } catch (err) {
     console.error(err);
     alert("Error al procesar el pago");

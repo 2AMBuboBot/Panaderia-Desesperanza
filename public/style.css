@@ -152,3 +152,7 @@ button:hover {
 header img {
   border-radius: 50%;
 }
+
+.avatar { border-radius:50%; overflow:hidden; display:inline-block; width:36px; height:38px; }
+.avatar img { width:100%; height:100%; object-fit:cover; }
+.avatar-link { display:inline-block; }

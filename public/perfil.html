@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mi Perfil — Panadería</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .avatar {
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      overflow:hidden;
+      border:2px solid #fff;
+      display:inline-block;
+      cursor:pointer;
+    }
+    .avatar img { width:100%; height:100%; object-fit:cover; }
+    .perfil-card { max-width:900px; margin:40px auto; }
+    .historial-list { max-height:350px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <!-- reutiliza tu header identico al index, agregando el avatar en la derecha -->
+  <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-4 py-2">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center" href="index.html">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyFNGqCmS2OrtLd63XAbDs5Gpwa-Q74uZJKg&s" alt="logo" width="35" class="me-2">
+        <span class="fw-bold">Panadería <span class="text-warning">La Desesperanza</span></span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="menuPrincipal">
+        <ul class="nav mb-2 mb-md-0 justify-content-center flex-grow-1">
+          <li><a href="index.html" class="nav-link px-2 text-white">Tienda</a></li>
+          <li><a href="/sobre" class="nav-link px-2 text-white">Sobre Nosotros</a></li>
+          <li id="menuVentas" style="display:none;"><a href="/ventas" class="nav-link px-2 text-warning fw-semibold">Ventas</a></li>
+        </ul>
+
+        <div class="d-flex align-items-center gap-3">
+          <a href="carrito.html" class="btn btn-outline-dark">🛒 Carrito</a>
+          <div class="avatar" id="avatarBtn" title="Mi perfil">
+            <img src="/images/default-avatar.png" alt="avatar">
+          </div>
+          <button id="btnLogout" class="btn btn-danger">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="perfil-card container">
+    <div class="row">
+      <div class="col-md-6">
+        <h3>Mi información</h3>
+        <form id="perfilForm">
+          <div class="mb-3">
+            <label>Nombre</label>
+            <input id="nombre" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label>Teléfono</label>
+            <input id="telefono" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label>Email</label>
+            <input id="email" class="form-control" type="email">
+          </div>
+          <div class="mb-3">
+            <label>Dirección</label>
+            <input id="direccion" class="form-control">
+          </div>
+          <button class="btn btn-primary" id="btnGuardar">Guardar cambios</button>
+        </form>
+
+        <hr>
+
+        <h5>Saldo</h5>
+        <p>Saldo actual: $<span id="saldo">0.00</span></p>
+        <div class="d-flex gap-2">
+          <input id="importeFondos" class="form-control" placeholder="Cantidad a ingresar">
+          <button id="btnAgregarFondos" class="btn btn-success">Agregar fondos</button>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <h3>Historial de compras</h3>
+        <div id="listaCompras" class="historial-list list-group"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center py-3">© 2025 Panadería “La Desesperanza”</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // cargar perfil
+      const resp = await fetch('/api/perfil', { credentials: 'include' });
+      if (!resp.ok) return location.href = '/login.html';
+      const perfil = await resp.json();
+      document.getElementById('nombre').value = perfil.nombre || '';
+      document.getElementById('telefono').value = perfil.telefono || '';
+      document.getElementById('email').value = perfil.email || '';
+      document.getElementById('direccion').value = perfil.direccion || '';
+      document.getElementById('saldo').textContent = parseFloat(perfil.saldo || 0).toFixed(2);
+
+      // mostrar ventas para admin si aplica
+      fetch('/api/session', { credentials: 'include' }).then(r=>r.json()).then(d=>{
+        if (d.tipo === 'admin') document.getElementById('menuVentas').style.display = 'block';
+      });
+
+      // guardar cambios
+      document.getElementById('perfilForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          nombre: document.getElementById('nombre').value.trim(),
+          telefono: document.getElementById('telefono').value.trim(),
+          email: document.getElementById('email').value.trim(),
+          direccion: document.getElementById('direccion').value.trim()
+        };
+        const r = await fetch('/api/perfil', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+        const j = await r.json();
+        alert(j.mensaje || 'Guardado');
+      });
+
+      // agregar fondos
+      document.getElementById('btnAgregarFondos').addEventListener('click', async () => {
+        const importe = parseFloat(document.getElementById('importeFondos').value);
+        if (isNaN(importe) || importe <= 0) return alert('Importe inválido');
+        const r = await fetch('/api/perfil/fondos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ importe })
+        });
+        const j = await r.json();
+        if (!r.ok) return alert(j.error || j.mensaje || 'Error');
+        document.getElementById('saldo').textContent = parseFloat(j.nuevoSaldo).toFixed(2);
+        alert('Fondos agregados');
+      });
+
+      // historial
+      const rh = await fetch('/api/perfil/compras', { credentials: 'include' });
+      const datos = await rh.json();
+      const lista = document.getElementById('listaCompras');
+      if (!datos.compras || datos.compras.length === 0) {
+        lista.innerHTML = '<div class="text-muted">No hay compras aún</div>';
+      } else {
+        datos.compras.forEach(c => {
+          const el = document.createElement('div');
+          el.className = 'list-group-item';
+          el.innerHTML = `
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong>#${c.id_compra}</strong> — ${new Date(c.fecha_compra).toLocaleString()} <br>
+                Método: ${c.metodo}
+              </div>
+              <div>
+                <strong>$${parseFloat(c.total).toFixed(2)}</strong><br>
+                <a class="btn btn-sm btn-outline-primary" href="/api/ticket/${c.id_compra}" target="_blank">Descargar ticket</a>
+                <button class="btn btn-sm btn-outline-secondary verDetalles" data-id="${c.id_compra}">Ver detalles</button>
+              </div>
+            </div>
+          `;
+          lista.appendChild(el);
+        });
+
+        // delegación click ver detalles
+        lista.addEventListener('click', async (ev) => {
+          if (ev.target.classList.contains('verDetalles')) {
+            const id = ev.target.dataset.id;
+            const r = await fetch(`/api/perfil/compras/${id}`, { credentials: 'include' });
+            const j = await r.json();
+            let txt = 'Detalles:\\n';
+            j.detalles.forEach(d => {
+              txt += `${d.cantidad} x ${d.nombre} — $${parseFloat(d.subtotal).toFixed(2)}\\n`;
+            });
+            alert(txt);
+          }
+        });
+      }
+
+      // logout
+      document.getElementById('btnLogout').addEventListener('click', () => {
+        fetch('/api/logout', { method: 'POST', credentials: 'include' }).then(()=> location.href = '/login.html');
+      });
+
+      // avatar click = estamos en el perfil, si quieres que abra modal puedes adaptarlo
+      document.getElementById('avatarBtn').addEventListener('click', () => {
+        // ya estamos en perfil.html; si no, redirige
+        // location.href = '/perfil.html';
+      });
+    });
+  </script>
+</body>
+</html>

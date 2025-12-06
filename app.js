@@ -5,6 +5,7 @@ const MySQLStore = require("express-mysql-session")(session);
 const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
+const PDFDocument = require('pdfkit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -380,12 +381,16 @@ app.delete("/api/carrito/:id_carrito", requireLogin, async (req, res) => {
 });
 
 //Pagar
-app.post("/api/pagar", requireLogin, async (req, res) => {
+app.post('/api/pagar', requireLogin, async (req, res) => {
   const id_cliente = req.session.id_cliente;
+  if (!id_cliente) return res.status(403).json({ mensaje: 'No autorizado' });
 
+  const conn = await pool.promise().getConnection(); // usando pool creado anteriormente
   try {
-    // obtener carrito
-    const [items] = await promisePool.query(`
+    await conn.query('START TRANSACTION');
+
+    // Obtener items del carrito
+    const [items] = await conn.query(`
       SELECT c.id_producto, c.cantidad, p.precio
       FROM carrito c
       JOIN producto p ON c.id_producto = p.id_producto
@@ -393,37 +398,63 @@ app.post("/api/pagar", requireLogin, async (req, res) => {
     `, [id_cliente]);
 
     if (items.length === 0) {
-      return res.json({ mensaje: "Tu carrito está vacío" });
+      await conn.query('ROLLBACK');
+      conn.release();
+      return res.status(400).json({ mensaje: 'Tu carrito está vacío' });
     }
 
-    // calcular total
-    const total = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    // Calcular total
+    let total = 0;
+    for (const it of items) {
+      total += parseFloat(it.precio) * parseInt(it.cantidad);
+    }
 
-    // crear pedido
-    const [pedido] = await promisePool.query(`
-      INSERT INTO pedido (id_cliente, fecha_pedido, total, estado)
-      VALUES (?, NOW(), ?, 'pendiente')
+    // Verificar saldo
+    const [clienteRows] = await conn.query('SELECT saldo, nombre FROM cliente WHERE id_cliente = ? FOR UPDATE', [id_cliente]);
+    if (!clienteRows.length) {
+      await conn.query('ROLLBACK');
+      conn.release();
+      return res.status(404).json({ mensaje: 'Cliente no encontrado' });
+    }
+    const saldo = parseFloat(clienteRows[0].saldo || 0);
+    if (saldo < total) {
+      await conn.query('ROLLBACK');
+      conn.release();
+      return res.status(400).json({ mensaje: 'Saldo insuficiente' });
+    }
+
+    // Insertar compra
+    const [compraResult] = await conn.query(`
+      INSERT INTO compra (id_cliente, fecha_compra, total, metodo) VALUES (?, NOW(), ?, 'saldo')
     `, [id_cliente, total]);
+    const id_compra = compraResult.insertId;
 
-    const id_pedido = pedido.insertId;
+    // Insertar detalles
+    for (const it of items) {
+      const subtotal = parseFloat(it.precio) * parseInt(it.cantidad);
+      await conn.query(`
+        INSERT INTO detalle_compra (id_compra, id_producto, cantidad, precio_unitario, subtotal)
+        VALUES (?, ?, ?, ?, ?)
+      `, [id_compra, it.id_producto, it.cantidad, it.precio, subtotal]);
+    }
 
-    for (const item of items) {
-  const subtotal = item.precio * item.cantidad;
+    // Descontar saldo
+    await conn.query('UPDATE cliente SET saldo = saldo - ? WHERE id_cliente = ?', [total, id_cliente]);
 
-  await promisePool.query(`
-    INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario, subtotal)
-    VALUES (?, ?, ?, ?, ?)
-  `, [id_pedido, item.id_producto, item.cantidad, item.precio, subtotal]);
-}
+    // Vaciar carrito
+    await conn.query('DELETE FROM carrito WHERE id_cliente = ?', [id_cliente]);
 
-    // vaciar carrito
-    await promisePool.query(`DELETE FROM carrito WHERE id_cliente = ?`, [id_cliente]);
+    await conn.query('COMMIT');
 
-    res.json({ mensaje: "Compra realizada con éxito 🎉 Orden #" + id_pedido });
+    conn.release();
 
+    // Generar PDF y devolver enlace para descargar
+    return res.json({ mensaje: 'Compra realizada', id_compra, ticket: `/api/ticket/${id_compra}` });
   } catch (err) {
-    console.error("❌ Error al pagar:", err);
-    res.status(500).json({ mensaje: "Error al procesar el pago" });
+    await conn.query('ROLLBACK').catch(()=>{});
+    conn.release();
+    console.error('Error pagar(saldo):', err);
+    res.status(500).json({ mensaje: 'Error al procesar el pago' });
   }
 });
 
@@ -461,6 +492,162 @@ app.get("/api/ventas", async (req, res) => {
   }
 });
 
+app.get('/api/perfil', requireLogin, async (req, res) => {
+  try {
+    // Solo clientes acceden a su perfil
+    const id_cliente = req.session.id_cliente;
+    if (!id_cliente) return res.status(403).json({ error: 'No autorizado' });
+
+    const [rows] = await promisePool.query('SELECT id_cliente, nombre, telefono, email, direccion, saldo FROM cliente WHERE id_cliente = ?', [id_cliente]);
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error /api/perfil GET:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// --- RUTA: actualizar perfil (editar datos y saldo opcionalmente) ---
+app.put('/api/perfil', requireLogin, async (req, res) => {
+  try {
+    const id_cliente = req.session.id_cliente;
+    if (!id_cliente) return res.status(403).json({ error: 'No autorizado' });
+
+    // campos permitidos editar
+    const { nombre, telefono, email, direccion } = req.body;
+
+    await promisePool.query(
+      `UPDATE cliente SET nombre=?, telefono=?, email=?, direccion=? WHERE id_cliente=?`,
+      [nombre || null, telefono || null, email || null, direccion || null, id_cliente]
+    );
+
+    res.json({ mensaje: 'Perfil actualizado' });
+  } catch (err) {
+    console.error('Error /api/perfil PUT:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// --- RUTA: agregar fondos al saldo (no pasar límite) ---
+app.post('/api/perfil/fondos', requireLogin, async (req, res) => {
+  try {
+    const id_cliente = req.session.id_cliente;
+    const { importe } = req.body; // importe a añadir (decimal)
+
+    if (!id_cliente) return res.status(403).json({ error: 'No autorizado' });
+    const add = parseFloat(importe);
+    if (isNaN(add) || add <= 0) return res.status(400).json({ error: 'Importe inválido' });
+
+    const [rows] = await promisePool.query('SELECT saldo FROM cliente WHERE id_cliente = ?', [id_cliente]);
+    if (!rows.length) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    const current = parseFloat(rows[0].saldo || 0);
+    const MAX = 999999999999.00;
+    if (current + add > MAX) return res.status(400).json({ error: 'No se puede exceder el límite máximo' });
+
+    const [r] = await promisePool.query('UPDATE cliente SET saldo = saldo + ? WHERE id_cliente = ?', [add, id_cliente]);
+
+    res.json({ mensaje: 'Fondos agregados', nuevoSaldo: current + add });
+  } catch (err) {
+    console.error('Error /api/perfil/fondos:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// --- RUTA: historial de compras del cliente ---
+app.get('/api/perfil/compras', requireLogin, async (req, res) => {
+  try {
+    const id_cliente = req.session.id_cliente;
+    const [compras] = await promisePool.query(`
+      SELECT c.id_compra, c.fecha_compra, c.total, c.metodo
+      FROM compra c
+      WHERE c.id_cliente = ?
+      ORDER BY c.fecha_compra DESC
+    `, [id_cliente]);
+
+    // opcional: también devolver detalles por compra (o el frontend pedirá /api/perfil/compras/:id)
+    res.json({ compras });
+  } catch (err) {
+    console.error('Error /api/perfil/compras:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// --- RUTA: detalles de una compra ---
+app.get('/api/perfil/compras/:id', requireLogin, async (req, res) => {
+  try {
+    const id_cliente = req.session.id_cliente;
+    const id_compra = req.params.id;
+    // validar que la compra pertenezca al cliente
+    const [check] = await promisePool.query('SELECT id_compra FROM compra WHERE id_compra=? AND id_cliente=?', [id_compra, id_cliente]);
+    if (check.length === 0) return res.status(404).json({ error: 'Compra no encontrada' });
+
+    const [detalles] = await promisePool.query(`
+      SELECT dc.id_detalle, dc.id_producto, p.nombre, dc.cantidad, dc.precio_unitario, dc.subtotal
+      FROM detalle_compra dc
+      JOIN producto p ON dc.id_producto = p.id_producto
+      WHERE dc.id_compra = ?
+    `, [id_compra]);
+
+    res.json({ detalles });
+  } catch (err) {
+    console.error('Error /api/perfil/compras/:id:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+app.get('/api/ticket/:id_compra', requireLogin, async (req, res) => {
+  try {
+    const id_compra = req.params.id_compra;
+    const id_cliente = req.session.id_cliente;
+
+    // Verificamos que la compra pertenezca al cliente
+    const [check] = await promisePool.query('SELECT * FROM compra WHERE id_compra = ? AND id_cliente = ?', [id_compra, id_cliente]);
+    if (check.length === 0) return res.status(404).send('No autorizado o compra no encontrada');
+
+    const compra = check[0];
+
+    const [detalles] = await promisePool.query(`
+      SELECT dc.cantidad, dc.precio_unitario, dc.subtotal, p.nombre
+      FROM detalle_compra dc
+      JOIN producto p ON dc.id_producto = p.id_producto
+      WHERE dc.id_compra = ?
+    `, [id_compra]);
+
+    // Generar PDF con PDFKit
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+
+    // Headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=ticket_${id_compra}.pdf`);
+
+    // Pipe al response
+    doc.pipe(res);
+
+    // Contenido del ticket
+    doc.fontSize(18).text('Panadería La Desesperanza', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text(`Fecha: ${new Date(compra.fecha_compra).toLocaleString()}`);
+    doc.text(`Número de venta: ${compra.id_compra}`);
+    doc.moveDown(0.5);
+
+    doc.fontSize(14).text('Productos:', { underline: true });
+    doc.moveDown(0.3);
+
+    detalles.forEach(d => {
+      doc.fontSize(12).text(`${d.cantidad} x ${d.nombre}  —  $${parseFloat(d.precio_unitario).toFixed(2)}  =  $${parseFloat(d.subtotal).toFixed(2)}`);
+    });
+
+    doc.moveDown(0.5);
+    doc.fontSize(14).text(`Total a pagar: $${parseFloat(compra.total).toFixed(2)}`, { align: 'right' });
+
+    doc.end();
+  } catch (err) {
+    console.error('Error generando ticket:', err);
+    res.status(500).send('Error generando ticket');
+  }
+});
 
 // Servidor
 app.listen(PORT, () => {
