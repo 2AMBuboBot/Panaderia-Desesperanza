@@ -559,20 +559,22 @@ app.post('/api/perfil/fondos', requireLogin, async (req, res) => {
 app.get('/api/perfil/compras', requireLogin, async (req, res) => {
   try {
     const id_cliente = req.session.id_cliente;
+
     const [compras] = await promisePool.query(`
-      SELECT c.id_compra, c.fecha_compra, c.total, c.metodo
+      SELECT c.id_compra, c.fecha_compra, c.total
       FROM compra c
       WHERE c.id_cliente = ?
       ORDER BY c.fecha_compra DESC
     `, [id_cliente]);
 
-    // opcional: también devolver detalles por compra (o el frontend pedirá /api/perfil/compras/:id)
     res.json({ compras });
+
   } catch (err) {
     console.error('Error /api/perfil/compras:', err);
     res.status(500).json({ error: 'Error en servidor' });
   }
 });
+
 
 // --- RUTA: detalles de una compra ---
 app.get('/api/perfil/compras/:id', requireLogin, async (req, res) => {
