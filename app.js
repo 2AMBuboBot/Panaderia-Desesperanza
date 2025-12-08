@@ -6,6 +6,8 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
 const PDFDocument = require('pdfkit');
+const bcrypt = require("bcrypt");
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,10 +73,12 @@ app.post("/api/registerCliente", async (req, res) => {
 
   try {
     // Registrar cliente
-    const [result] = await promisePool.query(
-      "INSERT INTO cliente (nombre, telefono, email, contraseña, direccion) VALUES (?, ?, ?, ?, ?)",
-      [nombre, telefono, email, password, direccion]
-    );
+    const hash = await bcrypt.hash(password, 10);
+
+const [result] = await promisePool.query(
+  "INSERT INTO cliente (nombre, telefono, email, contraseña, direccion) VALUES (?, ?, ?, ?, ?)",
+  [nombre, telefono, email, hash, direccion]
+);
 
     const id_cliente = result.insertId;
 
@@ -105,42 +109,74 @@ app.post("/api/registerCliente", async (req, res) => {
 app.post("/api/loginCliente", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) return res.status(400).json({ mensaje: "Faltan datos" });
+  if (!email || !password) {
+    return res.status(400).json({ mensaje: "Faltan datos" });
+  }
 
   try {
     const [rows] = await promisePool.query(
-      "SELECT * FROM cliente WHERE email = ? AND contraseña = ?",
-      [email, password]
+      "SELECT * FROM cliente WHERE email = ?",
+      [email]
     );
 
-    if (rows.length === 0) return res.status(401).json({ mensaje: "Correo o contraseña incorrectos" });
+    if (rows.length === 0) {
+      return res.status(401).json({ mensaje: "Correo o contraseña incorrectos" });
+    }
+
+    const cliente = rows[0];
+    const passDB = cliente.contraseña;
+
+    let esValida = false;
+
+    // Caso 1: ya está encriptada con bcrypt
+    if (passDB.startsWith("$2")) {
+      esValida = await bcrypt.compare(password, passDB);
+    } 
+    // Caso 2: contraseña vieja en texto plano
+    else {
+      if (password === passDB) {
+        esValida = true;
+
+        // 🔁 Actualizar automáticamente a bcrypt
+        const nuevoHash = await bcrypt.hash(password, 10);
+        await promisePool.query(
+          "UPDATE cliente SET contraseña = ? WHERE id_cliente = ?",
+          [nuevoHash, cliente.id_cliente]
+        );
+        console.log("✅ Contraseña de cliente actualizada a bcrypt");
+      }
+    }
+
+    if (!esValida) {
+      return res.status(401).json({ mensaje: "Correo o contraseña incorrectos" });
+    }
 
     req.session.loggedIn = true;
     req.session.tipo = "cliente";
-    req.session.id_cliente = rows[0].id_cliente;
+    req.session.id_cliente = cliente.id_cliente;
 
     res.json({ mensaje: "Login cliente exitoso" });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ mensaje: "Error en el servidor" });
+    console.error("Error loginCliente:", err);
+    res.status(500).json({ mensaje: "Error del servidor" });
   }
 });
+
 
 
 // LOGIN ADMIN
 app.post("/api/loginAdmin", async (req, res) => {
   const { username, password } = req.body;
 
-  // Validación básica
   if (!username || !password) {
-    return res.status(400).json({ mensaje: "Faltan datos: username o password" });
+    return res.status(400).json({ mensaje: "Faltan datos" });
   }
 
   try {
-    // Buscar usuario
     const [rows] = await promisePool.query(
-      "SELECT * FROM usuarios WHERE username = ? AND password = ?",
-      [username, password]
+      "SELECT * FROM usuarios WHERE username = ?",
+      [username]
     );
 
     if (rows.length === 0) {
@@ -148,19 +184,48 @@ app.post("/api/loginAdmin", async (req, res) => {
     }
 
     const user = rows[0];
+    const passDB = user.password;
 
-    // Guardar sesión
+    let esValida = false;
+
+    // Contraseña ya en bcrypt
+    if (passDB.startsWith("$2")) {
+      esValida = await bcrypt.compare(password, passDB);
+    } 
+    // Contraseña vieja en plano
+    else {
+      if (password === passDB) {
+        esValida = true;
+
+        // Auto-migrar a bcrypt
+        const nuevoHash = await bcrypt.hash(password, 10);
+        await promisePool.query(
+          "UPDATE usuarios SET password = ? WHERE id = ?",
+          [nuevoHash, user.id]
+        );
+        console.log("✅ Contraseña admin actualizada a bcrypt");
+      }
+    }
+
+    if (!esValida) {
+      return res.status(401).json({ mensaje: "Usuario o contraseña incorrectos" });
+    }
+
     req.session.loggedIn = true;
     req.session.tipo = "admin";
-    req.session.id_admin = user.id; 
+    req.session.id_admin = user.id;
 
-    res.json({ mensaje: "Login admin exitoso", user: { id: user.id, username: user.username } });
+    res.json({
+      mensaje: "Login admin exitoso",
+      user: { id: user.id, username: user.username }
+    });
 
   } catch (err) {
-    console.error("Error en loginAdmin:", err);
-    res.status(500).json({ mensaje: "Error en el servidor" });
+    console.error("Error loginAdmin:", err);
+    res.status(500).json({ mensaje: "Error del servidor" });
   }
 });
+
 
 
 // VER SESION
