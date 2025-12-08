@@ -14,13 +14,13 @@ const PORT = process.env.PORT || 3000;
 
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: "https://panaderia-desesperanza-srh.onrender.com",
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
-
+app.set('trust proxy', 1);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
@@ -51,8 +51,8 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60, // 1 hora
     httpOnly: true,
-    secure: false,
-    sameSite: "lax"
+    secure: true,
+    sameSite: "none"
   }
 }));
 
@@ -792,6 +792,6 @@ doc
 
 // Servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en https://localhost:${PORT}`);
 });
 
