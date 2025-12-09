@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 
 app.use(cors({
-  origin: "https://panaderia-desesperanza-srh.onrender.com",
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -792,6 +792,6 @@ doc
 
 // Servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en https://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
 
